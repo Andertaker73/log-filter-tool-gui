@@ -46,6 +46,17 @@ def execute_filter():
         output_file = generate_unique_filename(output_file)
         filter_log(input_file, output_file, param)
 
+def generate_bat_file():
+    bat_file_path = os.path.join(os.path.dirname(__file__), "run_log_filter_tool.bat")
+    script_path = os.path.abspath(__file__)
+
+    with open(bat_file_path, 'w') as bat_file:
+        bat_file.write(f'@echo off\n')
+        bat_file.write(f'python "{script_path}"\n')
+        bat_file.write(f'pause\n')
+
+    messagebox.showinfo("Completed", f"Batch file created: {bat_file_path}")
+
 def close_app():
     # Closes the command prompt
     if 'PYTHON_CWD' in os.environ:
@@ -82,5 +93,9 @@ entry_param.pack(pady=5)
 # "Generate Log" button
 btn_generate_log = tk.Button(root, text="Generate Log", command=execute_filter)
 btn_generate_log.pack(pady=20)
+
+# Generate .bat file button
+generate_bat_button = tk.Button(root, text="Generate .bat file", command=generate_bat_file)
+generate_bat_button.pack(pady=20)
 
 root.mainloop()
