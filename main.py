@@ -1,101 +1,204 @@
-import tkinter as tk
-from tkinter import filedialog, messagebox
 import os
+import tempfile
+import re
+import time
+import uuid
+from flask import Flask, request, send_file
+from zipfile import ZipFile
+import shutil
+from threading import Thread
 
-def filter_log(input_file, output_file, param):
+app = Flask(__name__)
+
+MAX_PART_SIZE = 200 * 1024 * 1024  # 200 MB em bytes
+
+def split_log_file(input_file, output_dir, max_size=MAX_PART_SIZE):
+    """
+    Divide o arquivo de log em partes menores de até 200MB.
+    """
+    part_number = 0
+    current_size = 0
+    part_files = []
+    current_part = None
+
     try:
-        with open(input_file, 'r') as log_in:
-            with open(output_file, 'w') as log_out:
-                for line in log_in:
-                    if param in line:
-                        log_out.write(line)
-        messagebox.showinfo("Completed", f"Filtering completed. The new file has been saved as '{output_file}'.")
-    except FileNotFoundError:
-        messagebox.showerror("Error", f"The file '{input_file}' was not found.")
+        with open(input_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                if current_size + len(line.encode('utf-8')) > max_size:
+                    if current_part:
+                        current_part.close()
+                    part_number += 1
+                    part_file_path = os.path.join(output_dir, f"log_part_{part_number}.log")
+                    print(f"Creating new part file: {part_file_path}")  # Debugging line
+                    part_files.append(part_file_path)
+                    current_part = open(part_file_path, 'w', encoding='utf-8')
+                    current_size = 0
+
+                if current_part is None:
+                    # Garantir que pelo menos uma parte seja criada
+                    part_number += 1
+                    part_file_path = os.path.join(output_dir, f"log_part_{part_number}.log")
+                    print(f"Creating initial part file: {part_file_path}")  # Debugging line
+                    part_files.append(part_file_path)
+                    current_part = open(part_file_path, 'w', encoding='utf-8')
+
+                current_part.write(line)
+                current_size += len(line.encode('utf-8'))
+
+            if current_part:
+                current_part.close()
+
+        print(f"Created {len(part_files)} part files.")  # Debugging line
+        return part_files
     except Exception as e:
-        messagebox.showerror("Error", f"An error occurred: {e}")
+        raise Exception(f"An error occurred while splitting the log file: {e}")
 
-def select_file():
-    input_file = filedialog.askopenfilename(
-        title="Select the log file",
-        filetypes=(("Log Files", "*.log"), ("All Files", "*.*"))
-    )
-    if input_file:
-        label_selected_file_path.config(text=input_file)
-
-def generate_unique_filename(output_file):
+def sanitize_filename(url):
     """
-    Generates a unique filename by adding a number in parentheses if necessary.
+    Sanitiza o nome do arquivo para garantir que seja válido em todos os sistemas de arquivos.
+    Substitui caracteres inválidos por underscores.
     """
-    base, ext = os.path.splitext(output_file)
-    i = 1
-    unique_file = output_file
-    while os.path.exists(unique_file):
-        unique_file = f"{base}({i}){ext}"
-        i += 1
-    return unique_file
+    sanitized = re.sub(r'[\\/*?:"<>|]', '_', url)
+    sanitized = sanitized.strip('_')  # Remove underscores do início/fim
+    # Opcional: Limitar o comprimento do nome do arquivo
+    return sanitized[:255]  # Limite típico de sistemas de arquivos
 
-def execute_filter():
-    input_file = label_selected_file_path.cget("text")
-    param = entry_param.get()
-    output_file = os.path.join(os.path.dirname(input_file), f"filtered_{os.path.basename(input_file)}")
+def filter_urls(input_file, output_dir):
+    """
+    Filtra as URLs do arquivo de log e cria arquivos separados para cada URL.
+    Retorna a lista de caminhos dos arquivos filtrados.
+    """
+    url_files = {}
+    output_file_paths = []
+    try:
+        with open(input_file, 'r', encoding='utf-8') as log_origin:
+            for line in log_origin:
+                match = re.search(r'(GET|POST) (.*?) HTTP/1.1', line)
+                if match:
+                    url = match.group(2)
+                    sanitized_url = sanitize_filename(url)
+                    # Gera um nome de arquivo único para evitar duplicações
+                    unique_filename = f"url_{sanitized_url}_{uuid.uuid4().hex}.log"
+                    output_file = os.path.join(output_dir, unique_filename)
 
-    if not input_file or not param:
-        messagebox.showwarning("Warning", "All fields must be filled!")
-    else:
-        output_file = generate_unique_filename(output_file)
-        filter_log(input_file, output_file, param)
+                    if url not in url_files:
+                        try:
+                            # Abrir o arquivo de saída
+                            url_files[url] = open(output_file, 'w', encoding='utf-8')
+                            output_file_paths.append(output_file)
+                            print(f"Creating filtered file: {output_file}")  # Debugging line
+                        except Exception as e:
+                            print(f"Failed to create file {output_file}: {e}")
+                            continue
 
-def generate_bat_file():
-    bat_file_path = os.path.join(os.path.dirname(__file__), "run_log_filter_tool.bat")
-    script_path = os.path.abspath(__file__)
+                    url_files[url].write(line)
 
-    with open(bat_file_path, 'w') as bat_file:
-        bat_file.write(f'@echo off\n')
-        bat_file.write(f'python "{script_path}"\n')
-        bat_file.write(f'pause\n')
+        for file in url_files.values():
+            file.close()
 
-    messagebox.showinfo("Completed", f"Batch file created: {bat_file_path}")
+        print(f"Filtered and created {len(output_file_paths)} URL-specific files.")  # Debugging line
+        return output_file_paths  # Retorna a lista de caminhos dos arquivos
+    except Exception as e:
+        raise Exception(f"An error occurred while filtering URLs: {e}")
 
-def close_app():
-    # Closes the command prompt
-    if 'PYTHON_CWD' in os.environ:
-        os.system('taskkill /PID %d /F' % os.getpid())
-    root.destroy()
+def cleanup_files(output_dir, all_output_files, log_parts, zip_filepath):
+    """
+    Limpa arquivos temporários e diretório após o download do zip.
+    """
+    time.sleep(2)  # Atraso para garantir que o arquivo não esteja mais em uso
+    try:
+        for file in all_output_files + log_parts:
+            if os.path.exists(file):
+                os.remove(file)
+                print(f"Deleted temporary file: {file}")  # Debugging line
+        if os.path.exists(zip_filepath):
+            os.remove(zip_filepath)
+            print(f"Deleted ZIP file: {zip_filepath}")  # Debugging line
+        if os.path.exists(output_dir):
+            shutil.rmtree(output_dir)
+            print(f"Deleted temporary directory: {output_dir}")  # Debugging line
+    except Exception as e:
+        print(f"Cleanup failed: {e}")
 
-# Main interface configuration
-root = tk.Tk()
-root.title("Log Filter Tool")
+@app.route('/filter-log', methods=['POST'])
+def filter_log_endpoint():
+    try:
+        if 'log_file' not in request.files:
+            return "No file part in the request", 400
 
-# Event to close the interface
-root.protocol("WM_DELETE_WINDOW", close_app)
+        input_file = request.files['log_file']
 
-# "Select File" button
-btn_select_file = tk.Button(root, text="Select File", command=select_file)
-btn_select_file.pack(padx=10, pady=5)
+        if input_file.filename == '':
+            return "No selected file", 400
 
-# "File Path" label
-label_file_path = tk.Label(root, text="File Path:")
-label_file_path.pack(pady=5)
+        # Gerar um caminho temporário para o arquivo de entrada
+        output_dir = os.path.join(tempfile.gettempdir(), 'log_filter_output')
+        os.makedirs(output_dir, exist_ok=True)
 
-# Label to display the selected file path
-label_selected_file_path = tk.Label(root, text="No file selected", fg="blue", wraplength=400)
-label_selected_file_path.pack(pady=5)
+        input_file_path = os.path.join(output_dir, input_file.filename)
+        input_file.save(input_file_path)
+        print(f"File saved at {input_file_path}")  # Debugging line
 
-# "Enter the parameter to filter by:" label
-label_param = tk.Label(root, text="Enter the parameter to filter by (case sensitive):")
-label_param.pack(pady=5)
+        # Obter o parâmetro opcional
+        filter_param = request.form.get('filter_param')
 
-# Entry field for the filtering parameter
-entry_param = tk.Entry(root, width=50)
-entry_param.pack(pady=5)
+        # Dividir o arquivo de log em partes menores
+        log_parts = split_log_file(input_file_path, output_dir)
 
-# "Generate Log" button
-btn_generate_log = tk.Button(root, text="Generate Log", command=execute_filter)
-btn_generate_log.pack(pady=20)
+        if not log_parts:
+            return "No log parts were created", 500
 
-# Generate .bat file button
-generate_bat_button = tk.Button(root, text="Generate .bat file", command=generate_bat_file)
-generate_bat_button.pack(pady=20)
+        if filter_param:
+            # Gerar um único arquivo filtrado
+            filtered_file_path = os.path.join(output_dir, f"filtered_{sanitize_filename(filter_param)}.log")
+            with open(filtered_file_path, 'w', encoding='utf-8') as filtered_file:
+                for log_part in log_parts:
+                    with open(log_part, 'r', encoding='utf-8') as part:
+                        for line in part:
+                            if filter_param in line:
+                                filtered_file.write(line)
+            print(f"Filtered file created at {filtered_file_path}")  # Debugging line
 
-root.mainloop()
+            # Retornar o arquivo filtrado diretamente
+            return send_file(filtered_file_path, as_attachment=True, download_name=os.path.basename(filtered_file_path))
+
+        else:
+            # Aplicar o filtro em cada parte do log e criar arquivos separados para cada URL
+            all_output_files = []
+            for log_part in log_parts:
+                output_files = filter_urls(log_part, output_dir)
+                all_output_files.extend(output_files)
+
+            if not all_output_files:
+                return "No filtered files were created", 500
+
+            # Compactar os arquivos filtrados para enviar ao usuário
+            zip_filename = 'filtered_logs.zip'
+            zip_filepath = os.path.join(output_dir, zip_filename)
+            with ZipFile(zip_filepath, 'w') as zipf:
+                for file in all_output_files:
+                    if os.path.exists(file):
+                        zipf.write(file, os.path.basename(file))
+                        print(f"Added to zip: {file}")  # Debugging line
+                    else:
+                        print(f"File does not exist and cannot be added to zip: {file}")  # Debugging line
+
+            print(f"ZIP file created at {zip_filepath}")  # Debugging line
+
+            # Cleanup: Delete temporary files
+            for file in all_output_files:
+                if os.path.exists(file):
+                    try:
+                        os.remove(file)
+                        print(f"Deleted temporary file: {file}")
+                    except Exception as e:
+                        print(f"Failed to delete temporary file {file}: {e}")
+
+            return send_file(zip_filepath, as_attachment=True, download_name=zip_filename)
+
+    except Exception as e:
+        return f"An error occurred: {e}", 500
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
