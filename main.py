@@ -77,9 +77,7 @@ def filter_urls(input_file, output_dir):
                 if match:
                     url = match.group(2)
                     sanitized_url = sanitize_filename(url)
-                    # Gera um nome de arquivo único para evitar duplicações
-                    unique_filename = f"url_{sanitized_url}_{uuid.uuid4().hex}.log"
-                    output_file = os.path.join(output_dir, unique_filename)
+                    output_file = os.path.join(output_dir, f"{sanitized_url}.log")
 
                     if url not in url_files:
                         try:
@@ -100,6 +98,7 @@ def filter_urls(input_file, output_dir):
         return output_file_paths  # Retorna a lista de caminhos dos arquivos
     except Exception as e:
         raise Exception(f"An error occurred while filtering URLs: {e}")
+
 
 def cleanup_files(output_dir, all_output_files, log_parts, zip_filepath):
     """
