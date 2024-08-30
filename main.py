@@ -51,6 +51,7 @@ def split_log_file(input_file, output_dir, max_size=MAX_PART_SIZE):
         return part_files
     except Exception as e:
         raise Exception(f"An error occurred while splitting the log file: {e}")
+    pass
 
 def sanitize_filename(url):
     """
@@ -60,6 +61,7 @@ def sanitize_filename(url):
     sanitized = re.sub(r'[\\/*?:"<>|]', '_', url)
     sanitized = sanitized.strip('_')  # Remove underscores do início/fim
     return sanitized[:255]  # Limite típico de sistemas de arquivos
+    pass
 
 def filter_urls(input_file, output_dir):
     """
@@ -96,6 +98,30 @@ def filter_urls(input_file, output_dir):
         return output_file_paths  # Retorna a lista de caminhos dos arquivos
     except Exception as e:
         raise Exception(f"An error occurred while filtering URLs: {e}")
+    pass
+
+
+def concat_requests(input_file, output_dir, concat_param):
+    """
+    Concatena todas as requisições que começam com a URL base definida em concat_param.
+    Retorna o caminho do arquivo concatenado com o nome original.
+    """
+    sanitized_base_name = sanitize_filename(concat_param.rstrip("/"))  # Remover a barra no final, se houver
+    output_file = os.path.join(output_dir, f"{sanitized_base_name}.log")
+
+    with open(input_file, 'r', encoding='utf-8') as log_origin, open(output_file, 'w', encoding='utf-8') as concat_file:
+        lines_to_keep = []
+        for line in log_origin:
+            if concat_param in line:
+                concat_file.write(line)
+            else:
+                lines_to_keep.append(line)
+
+    # Sobrescrever o arquivo de log original com as linhas restantes
+    with open(input_file, 'w', encoding='utf-8') as log_origin:
+        log_origin.writelines(lines_to_keep)
+
+    return output_file
 
 def cleanup_files(output_dir, all_output_files, log_parts, zip_filepath):
     """
@@ -115,6 +141,7 @@ def cleanup_files(output_dir, all_output_files, log_parts, zip_filepath):
             print(f"Deleted temporary directory: {output_dir}")  # Debugging line
     except Exception as e:
         print(f"Cleanup failed: {e}")
+    pass
 
 @app.route('/filter-log', methods=['POST'])
 def filter_log_endpoint():
@@ -135,8 +162,9 @@ def filter_log_endpoint():
         input_file.save(input_file_path)
         print(f"File saved at {input_file_path}")  # Debugging line
 
-        # Obter o parâmetro opcional
+        # Obter os parâmetros opcionais
         filter_param = request.form.get('filter_param')
+        concat_param = request.form.get('concat_param')
 
         # Dividir o arquivo de log em partes menores
         log_parts = split_log_file(input_file_path, output_dir)
@@ -144,46 +172,46 @@ def filter_log_endpoint():
         if not log_parts:
             return "No log parts were created", 500
 
-        if filter_param:
-            # Gerar um único arquivo filtrado
-            filtered_file_path = os.path.join(output_dir, f"filtered_{sanitize_filename(filter_param)}.log")
-            with open(filtered_file_path, 'w', encoding='utf-8') as filtered_file:
-                for log_part in log_parts:
-                    with open(log_part, 'r', encoding='utf-8') as part:
-                        for line in part:
-                            if filter_param in line:
-                                filtered_file.write(line)
-            print(f"Filtered file created at {filtered_file_path}")  # Debugging line
-
-            # Retornar o arquivo filtrado diretamente
-            return send_file(filtered_file_path, as_attachment=True, download_name=os.path.basename(filtered_file_path))
-
-        else:
-            # Aplicar o filtro em cada parte do log e criar arquivos separados para cada URL
-            all_output_files = []
+        # Concatena as requisições que começam com a URL base definida em concat_param
+        if concat_param:
+            concat_files = []
             for log_part in log_parts:
-                output_files = filter_urls(log_part, output_dir)
-                all_output_files.extend(output_files)
+                concat_file = concat_requests(log_part, output_dir, concat_param)
+                concat_files.append(concat_file)
+            # Concatenar todos os arquivos gerados em um único arquivo, se necessário
+            if concat_files:
+                final_concat_file = concat_files[0]  # O nome final será o nome do primeiro arquivo concatenado
 
-            if not all_output_files:
-                return "No filtered files were created", 500
+        # Aplicar o filtro em cada parte do log e criar arquivos separados para cada URL
+        all_output_files = []
+        for log_part in log_parts:
+            output_files = filter_urls(log_part, output_dir)
+            all_output_files.extend(output_files)
 
-            # Usar um set para rastrear arquivos já adicionados ao zip
-            added_files = set()
-            zip_filename = 'filtered_logs.zip'
-            zip_filepath = os.path.join(output_dir, zip_filename)
-            with ZipFile(zip_filepath, 'w') as zipf:
-                for file in all_output_files:
-                    if os.path.exists(file) and file not in added_files:
-                        zipf.write(file, os.path.basename(file))
-                        added_files.add(file)
-                        print(f"Added to zip: {file}")  # Debugging line
-                    else:
-                        print(f"File already added or does not exist: {file}")  # Debugging line
+        if not all_output_files:
+            return "No filtered files were created", 500
 
-            print(f"ZIP file created at {zip_filepath}")  # Debugging line
+        # Usar um set para rastrear arquivos já adicionados ao zip
+        added_files = set()
+        zip_filename = 'filtered_logs.zip'
+        zip_filepath = os.path.join(output_dir, zip_filename)
+        with ZipFile(zip_filepath, 'w') as zipf:
+            for file in all_output_files:
+                if os.path.exists(file) and file not in added_files:
+                    zipf.write(file, os.path.basename(file))
+                    added_files.add(file)
+                    print(f"Added to zip: {file}")  # Debugging line
+                else:
+                    print(f"File already added or does not exist: {file}")  # Debugging line
 
-            return send_file(zip_filepath, as_attachment=True, download_name=zip_filename)
+            # Adicionar o arquivo concatenado ao zip, se existir
+            if concat_param and os.path.exists(final_concat_file):
+                zipf.write(final_concat_file, os.path.basename(final_concat_file))
+                print(f"Added concatenated file to zip: {final_concat_file}")  # Debugging line
+
+        print(f"ZIP file created at {zip_filepath}")  # Debugging line
+
+        return send_file(zip_filepath, as_attachment=True, download_name=zip_filename)
 
     except Exception as e:
         return f"An error occurred: {e}", 500
