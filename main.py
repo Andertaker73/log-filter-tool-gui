@@ -2,7 +2,6 @@ import os
 import tempfile
 import re
 import time
-import uuid
 from flask import Flask, request, send_file
 from zipfile import ZipFile
 import shutil
@@ -60,7 +59,6 @@ def sanitize_filename(url):
     """
     sanitized = re.sub(r'[\\/*?:"<>|]', '_', url)
     sanitized = sanitized.strip('_')  # Remove underscores do início/fim
-    # Opcional: Limitar o comprimento do nome do arquivo
     return sanitized[:255]  # Limite típico de sistemas de arquivos
 
 def filter_urls(input_file, output_dir):
@@ -98,7 +96,6 @@ def filter_urls(input_file, output_dir):
         return output_file_paths  # Retorna a lista de caminhos dos arquivos
     except Exception as e:
         raise Exception(f"An error occurred while filtering URLs: {e}")
-
 
 def cleanup_files(output_dir, all_output_files, log_parts, zip_filepath):
     """
@@ -171,27 +168,20 @@ def filter_log_endpoint():
             if not all_output_files:
                 return "No filtered files were created", 500
 
-            # Compactar os arquivos filtrados para enviar ao usuário
+            # Usar um set para rastrear arquivos já adicionados ao zip
+            added_files = set()
             zip_filename = 'filtered_logs.zip'
             zip_filepath = os.path.join(output_dir, zip_filename)
             with ZipFile(zip_filepath, 'w') as zipf:
                 for file in all_output_files:
-                    if os.path.exists(file):
+                    if os.path.exists(file) and file not in added_files:
                         zipf.write(file, os.path.basename(file))
+                        added_files.add(file)
                         print(f"Added to zip: {file}")  # Debugging line
                     else:
-                        print(f"File does not exist and cannot be added to zip: {file}")  # Debugging line
+                        print(f"File already added or does not exist: {file}")  # Debugging line
 
             print(f"ZIP file created at {zip_filepath}")  # Debugging line
-
-            # Cleanup: Delete temporary files
-            for file in all_output_files:
-                if os.path.exists(file):
-                    try:
-                        os.remove(file)
-                        print(f"Deleted temporary file: {file}")
-                    except Exception as e:
-                        print(f"Failed to delete temporary file {file}: {e}")
 
             return send_file(zip_filepath, as_attachment=True, download_name=zip_filename)
 
