@@ -56,6 +56,7 @@ def sanitize_filename(url):
 def filter_urls(input_file, output_dir, concat_params_list):
     url_files = {}
     output_file_paths = []
+    capture_lines = False
     try:
         with open(input_file, 'r', encoding='utf-8') as log_origin:
             for line in log_origin:
@@ -78,6 +79,17 @@ def filter_urls(input_file, output_dir, concat_params_list):
                             continue
 
                     url_files[url].write(line)
+                    capture_lines = '*ERROR*' in line  # Start capturing lines if *ERROR* is found
+
+                elif capture_lines:
+                    # Check if the line starts with a timestamp
+                    timestamp_match = re.match(r'\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}\.\d{3}', line)
+                    if not timestamp_match:
+                        # If the line doesn't start with a timestamp, append it to the last URL's log file
+                        url_files[url].write(line)
+                    else:
+                        # If a new timestamp is found, stop capturing
+                        capture_lines = False
 
         for file in url_files.values():
             file.close()
@@ -93,9 +105,17 @@ def concat_requests(input_file, output_dir, concat_param):
 
     with open(input_file, 'r', encoding='utf-8') as log_origin, open(output_file, 'w', encoding='utf-8') as concat_file:
         lines_to_keep = []
+        capture_lines = False
         for line in log_origin:
             if concat_param in line:
                 concat_file.write(line)
+                capture_lines = '*ERROR*' in line  # Start capturing lines if *ERROR* is found
+            elif capture_lines:
+                timestamp_match = re.match(r'\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}\.\d{3}', line)
+                if not timestamp_match:
+                    concat_file.write(line)
+                else:
+                    capture_lines = False
             else:
                 lines_to_keep.append(line)
 
@@ -167,7 +187,7 @@ def filter_log_endpoint():
         added_files = set()
         zip_filename = 'filtered_logs.zip'
         zip_filepath = os.path.join(output_dir, zip_filename)
-        # Modifique esta parte no bloco de criação do arquivo ZIP
+
         with ZipFile(zip_filepath, 'w') as zipf:
             for file in all_output_files:
                 if os.path.exists(file) and file not in added_files:
@@ -177,7 +197,6 @@ def filter_log_endpoint():
                 else:
                     print(f"File already added or does not exist: {file}")  # Debugging line
 
-            # Adicionar o arquivo concatenado ao zip, se existir e ainda não foi adicionado
             if concat_params:
                 for concat_file in concat_files:
                     if os.path.exists(concat_file) and concat_file not in added_files:
