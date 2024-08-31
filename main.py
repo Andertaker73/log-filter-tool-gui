@@ -9,45 +9,6 @@ from threading import Thread
 
 app = Flask(__name__)
 
-MAX_PART_SIZE = 200 * 1024 * 1024  # 200 MB em bytes
-
-def split_log_file(input_file, output_dir, max_size=MAX_PART_SIZE):
-    part_number = 0
-    current_size = 0
-    part_files = []
-    current_part = None
-
-    try:
-        with open(input_file, 'r', encoding='utf-8') as f:
-            for line in f:
-                if current_size + len(line.encode('utf-8')) > max_size:
-                    if current_part:
-                        current_part.close()
-                    part_number += 1
-                    part_file_path = os.path.join(output_dir, f"log_part_{part_number}.log")
-                    print(f"Creating new part file: {part_file_path}")
-                    part_files.append(part_file_path)
-                    current_part = open(part_file_path, 'w', encoding='utf-8')
-                    current_size = 0
-
-                if current_part is None:
-                    part_number += 1
-                    part_file_path = os.path.join(output_dir, f"log_part_{part_number}.log")
-                    print(f"Creating initial part file: {part_file_path}")
-                    part_files.append(part_file_path)
-                    current_part = open(part_file_path, 'w', encoding='utf-8')
-
-                current_part.write(line)
-                current_size += len(line.encode('utf-8'))
-
-            if current_part:
-                current_part.close()
-
-        print(f"Created {len(part_files)} part files.")
-        return part_files
-    except Exception as e:
-        raise Exception(f"An error occurred while splitting the log file: {e}")
-
 def sanitize_filename(url):
     sanitized = re.sub(r'[\\/*?:"<>|]', '_', url)
     sanitized = sanitized.strip('_')
@@ -124,10 +85,10 @@ def concat_requests(input_file, output_dir, concat_param):
 
     return output_file
 
-def cleanup_files(output_dir, all_output_files, log_parts, zip_filepath):
+def cleanup_files(output_dir, all_output_files, zip_filepath):
     time.sleep(2)
     try:
-        for file in all_output_files + log_parts:
+        for file in all_output_files:
             if os.path.exists(file):
                 os.remove(file)
                 print(f"Deleted temporary file: {file}")
@@ -161,25 +122,14 @@ def filter_log_endpoint():
         filter_param = request.form.get('filter_param')
         concat_params = request.form.get('concat_params')
 
-        log_parts = split_log_file(input_file_path, output_dir)
-
-        if not log_parts:
-            return "No log parts were created", 500
-
+        concat_files = []
         if concat_params:
-            concat_files = []
             concat_params_list = [param.strip() for param in concat_params.split(',')]
-            for log_part in log_parts:
-                for concat_param in concat_params_list:
-                    concat_file = concat_requests(log_part, output_dir, concat_param)
-                    concat_files.append(concat_file)
-            if concat_files:
-                final_concat_file = concat_files[0]
+            for concat_param in concat_params_list:
+                concat_file = concat_requests(input_file_path, output_dir, concat_param)
+                concat_files.append(concat_file)
 
-        all_output_files = []
-        for log_part in log_parts:
-            output_files = filter_urls(log_part, output_dir, concat_params_list if concat_params else [])
-            all_output_files.extend(output_files)
+        all_output_files = filter_urls(input_file_path, output_dir, concat_params_list if concat_params else [])
 
         if not all_output_files and not concat_files:
             return "No filtered files were created", 500
@@ -197,14 +147,13 @@ def filter_log_endpoint():
                 else:
                     print(f"File already added or does not exist: {file}")  # Debugging line
 
-            if concat_params:
-                for concat_file in concat_files:
-                    if os.path.exists(concat_file) and concat_file not in added_files:
-                        zipf.write(concat_file, os.path.basename(concat_file))
-                        added_files.add(concat_file)
-                        print(f"Added concatenated file to zip: {concat_file}")  # Debugging line
-                    else:
-                        print(f"Concatenated file already added or does not exist: {concat_file}")  # Debugging line
+            for concat_file in concat_files:
+                if os.path.exists(concat_file) and concat_file not in added_files:
+                    zipf.write(concat_file, os.path.basename(concat_file))
+                    added_files.add(concat_file)
+                    print(f"Added concatenated file to zip: {concat_file}")  # Debugging line
+                else:
+                    print(f"Concatenated file already added or does not exist: {concat_file}")  # Debugging line
 
         print(f"ZIP file created at {zip_filepath}")
 
