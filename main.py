@@ -6,8 +6,12 @@ from flask import Flask, request, send_file
 from zipfile import ZipFile
 import shutil
 from threading import Thread
+from werkzeug.serving import WSGIRequestHandler
 
 app = Flask(__name__)
+
+WSGIRequestHandler.protocol_version = "HTTP/1.1"
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
 def sanitize_filename(url):
     sanitized = re.sub(r'[\\/*?:"<>|]', '_', url)
@@ -101,6 +105,34 @@ def cleanup_files(output_dir, all_output_files, zip_filepath):
     except Exception as e:
         print(f"Cleanup failed: {e}")
 
+def create_and_save_zip(output_dir, all_output_files, concat_files, zip_filename, save_dir):
+    try:
+        added_files = set()
+        zip_filepath = os.path.join(save_dir, zip_filename)
+
+        with ZipFile(zip_filepath, 'w') as zipf:
+            for file in all_output_files:
+                if os.path.exists(file) and file not in added_files:
+                    zipf.write(file, os.path.basename(file))
+                    added_files.add(file)
+                    print(f"Added to zip: {file}")
+                else:
+                    print(f"File already added or does not exist: {file}")
+
+            for concat_file in concat_files:
+                if os.path.exists(concat_file) and concat_file not in added_files:
+                    zipf.write(concat_file, os.path.basename(concat_file))
+                    added_files.add(concat_file)
+                    print(f"Added concatenated file to zip: {concat_file}")
+                else:
+                    print(f"Concatenated file already added or does not exist: {concat_file}")
+
+        print(f"ZIP file saved at {zip_filepath}")
+        return zip_filepath  # Retorna o caminho para o arquivo ZIP salvo
+    except Exception as e:
+        print(f"An error occurred during ZIP creation: {e}")
+        return None
+
 @app.route('/filter-log', methods=['POST'])
 def filter_log_endpoint():
     try:
@@ -122,6 +154,10 @@ def filter_log_endpoint():
         filter_param = request.form.get('filter_param')
         concat_params = request.form.get('concat_params')
 
+        # Diretório de salvamento fornecido pelo usuário (ou um diretório padrão)
+        save_dir = request.form.get('save_dir', output_dir)
+        os.makedirs(save_dir, exist_ok=True)  # Criar o diretório de salvamento, se não existir
+
         concat_files = []
         if concat_params:
             concat_params_list = [param.strip() for param in concat_params.split(',')]
@@ -134,33 +170,25 @@ def filter_log_endpoint():
         if not all_output_files and not concat_files:
             return "No filtered files were created", 500
 
-        added_files = set()
         zip_filename = 'filtered_logs.zip'
-        zip_filepath = os.path.join(output_dir, zip_filename)
 
-        with ZipFile(zip_filepath, 'w') as zipf:
-            for file in all_output_files:
-                if os.path.exists(file) and file not in added_files:
-                    zipf.write(file, os.path.basename(file))
-                    added_files.add(file)
-                    print(f"Added to zip: {file}")  # Debugging line
-                else:
-                    print(f"File already added or does not exist: {file}")  # Debugging line
+        # Criar o ZIP no diretório temporário
+        zip_filepath = create_and_save_zip(output_dir, all_output_files, concat_files, zip_filename, output_dir)
+        if not zip_filepath:
+            return "Failed to create ZIP file", 500
 
-            for concat_file in concat_files:
-                if os.path.exists(concat_file) and concat_file not in added_files:
-                    zipf.write(concat_file, os.path.basename(concat_file))
-                    added_files.add(concat_file)
-                    print(f"Added concatenated file to zip: {concat_file}")  # Debugging line
-                else:
-                    print(f"Concatenated file already added or does not exist: {concat_file}")  # Debugging line
+        # Mover o ZIP para o diretório especificado
+        final_zip_path = os.path.join(save_dir, zip_filename)
+        shutil.move(zip_filepath, final_zip_path)
+        print(f"ZIP file moved to {final_zip_path}")
 
-        print(f"ZIP file created at {zip_filepath}")
+        # Limpar arquivos temporários
+        cleanup_files(output_dir, all_output_files, zip_filepath)
 
-        return send_file(zip_filepath, as_attachment=True, download_name=zip_filename)
+        return f"Processing completed. The ZIP file is available at {final_zip_path}", 200
 
     except Exception as e:
         return f"An error occurred: {e}", 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, threaded=True)
