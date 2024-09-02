@@ -16,20 +16,25 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 def sanitize_filename(url):
     sanitized = re.sub(r'[\\/*?:"<>|]', '_', url)
     sanitized = sanitized.strip('_')
-    return sanitized[:255]
+    return sanitized[:251]
 
 def filter_urls(input_file, output_dir, concat_params_list):
     url_files = {}
     output_file_paths = []
-    capture_lines = False
     try:
         with open(input_file, 'r', encoding='utf-8') as log_origin:
+            capture_lines = False
+            current_url = None
+
             for line in log_origin:
                 match = re.search(r'(GET|POST) (.*?) HTTP/1.1', line)
                 if match:
                     url = match.group(2)
+                    capture_lines = '*ERROR*' in line
+
                     if any(url.startswith(concat_param) for concat_param in concat_params_list):
-                        continue  # Ignore URLs that are in the concat_params_list
+                        current_url = None  # Ignore this URL
+                        continue
 
                     sanitized_url = sanitize_filename(url)
                     output_file = os.path.join(output_dir, f"{sanitized_url}.log")
@@ -43,17 +48,14 @@ def filter_urls(input_file, output_dir, concat_params_list):
                             print(f"Failed to create file {output_file}: {e}")
                             continue
 
+                    current_url = url
                     url_files[url].write(line)
-                    capture_lines = '*ERROR*' in line  # Start capturing lines if *ERROR* is found
-
-                elif capture_lines:
-                    # Check if the line starts with a timestamp
+                elif capture_lines and current_url:
+                    # Append the subsequent line if *ERROR* is found and the line doesn't start with a timestamp
                     timestamp_match = re.match(r'\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}\.\d{3}', line)
                     if not timestamp_match:
-                        # If the line doesn't start with a timestamp, append it to the last URL's log file
-                        url_files[url].write(line)
+                        url_files[current_url].write(line)
                     else:
-                        # If a new timestamp is found, stop capturing
                         capture_lines = False
 
         for file in url_files.values():
@@ -69,23 +71,17 @@ def concat_requests(input_file, output_dir, concat_param):
     output_file = os.path.join(output_dir, f"{sanitized_base_name}.log")
 
     with open(input_file, 'r', encoding='utf-8') as log_origin, open(output_file, 'w', encoding='utf-8') as concat_file:
-        lines_to_keep = []
         capture_lines = False
         for line in log_origin:
             if concat_param in line:
                 concat_file.write(line)
-                capture_lines = '*ERROR*' in line  # Start capturing lines if *ERROR* is found
+                capture_lines = '*ERROR*' in line
             elif capture_lines:
                 timestamp_match = re.match(r'\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}\.\d{3}', line)
                 if not timestamp_match:
                     concat_file.write(line)
                 else:
                     capture_lines = False
-            else:
-                lines_to_keep.append(line)
-
-    with open(input_file, 'w', encoding='utf-8') as log_origin:
-        log_origin.writelines(lines_to_keep)
 
     return output_file
 
@@ -133,6 +129,70 @@ def create_and_save_zip(output_dir, all_output_files, concat_files, zip_filename
         print(f"An error occurred during ZIP creation: {e}")
         return None
 
+def generate_checksum(input_file, all_output_files, output_dir):
+    original_line_count = 0
+    original_char_count = 0
+    processed_line_count = 0
+    processed_char_count = 0
+
+    # Contar as linhas e caracteres do arquivo original
+    with open(input_file, 'r', encoding='utf-8') as f:
+        for line in f:
+            original_line_count += 1
+            original_char_count += len(line)
+
+    # Contar as linhas e caracteres dos arquivos processados
+    for processed_file in all_output_files:
+        with open(processed_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                processed_line_count += 1
+                processed_char_count += len(line)
+
+    # Criar o relatório de checksum
+    checksum_log = os.path.join(output_dir, "checksum.log")
+    with open(checksum_log, 'w', encoding='utf-8') as log:
+        log.write(f"Linhas arquivo original: {original_line_count}\n")
+        log.write(f"Linhas processadas: {processed_line_count}\n")
+        log.write(f"Caracteres totais arquivo original: {original_char_count}\n")
+        log.write(f"Caracteres totais processados: {processed_char_count}\n")
+
+    print(f"Checksum log created at {checksum_log}")
+
+    return checksum_log
+
+def audit_processed_content(input_file, all_output_files):
+    input_lines_dict = {}
+    processed_lines_dict = {}
+
+    # Contar as ocorrências de cada linha no arquivo original
+    with open(input_file, 'r', encoding='utf-8') as f:
+        for line in f:
+            input_lines_dict[line] = input_lines_dict.get(line, 0) + 1
+
+    # Contar as ocorrências de cada linha nos arquivos processados
+    for processed_file in all_output_files:
+        with open(processed_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                processed_lines_dict[line] = processed_lines_dict.get(line, 0) + 1
+
+    # Verificar linhas faltantes ou duplicadas
+    missing_lines = 0
+    extra_lines = 0
+
+    for line, count in input_lines_dict.items():
+        if line not in processed_lines_dict:
+            missing_lines += count
+        elif processed_lines_dict[line] < count:
+            missing_lines += (count - processed_lines_dict[line])
+        elif processed_lines_dict[line] > count:
+            extra_lines += (processed_lines_dict[line] - count)
+
+    for line, count in processed_lines_dict.items():
+        if line not in input_lines_dict:
+            extra_lines += count
+
+    return missing_lines, extra_lines
+
 @app.route('/filter-log', methods=['POST'])
 def filter_log_endpoint():
     try:
@@ -154,10 +214,31 @@ def filter_log_endpoint():
         filter_param = request.form.get('filter_param')
         concat_params = request.form.get('concat_params')
 
-        # Diretório de salvamento fornecido pelo usuário (ou um diretório padrão)
         save_dir = request.form.get('save_dir', output_dir)
-        os.makedirs(save_dir, exist_ok=True)  # Criar o diretório de salvamento, se não existir
+        os.makedirs(save_dir, exist_ok=True)
 
+        if filter_param:
+            # Gerar um único arquivo filtrado com o nome filtered_{url_sanitizada}.log
+            sanitized_filter_param = sanitize_filename(filter_param.rstrip("/"))
+            filtered_file = os.path.join(save_dir, f"filtered_{sanitized_filter_param}.log")
+
+            with open(input_file_path, 'r', encoding='utf-8') as log_origin, open(filtered_file, 'w', encoding='utf-8') as out_file:
+                capture_lines = False
+                for line in log_origin:
+                    if filter_param in line:
+                        out_file.write(line)
+                        capture_lines = '*ERROR*' in line  # Start capturing lines if *ERROR* is found
+                    elif capture_lines:
+                        timestamp_match = re.match(r'\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}\.\d{3}', line)
+                        if not timestamp_match:
+                            out_file.write(line)
+                        else:
+                            capture_lines = False
+
+            # Relatar conclusão
+            return f"Processing completed. The log file is available at {filtered_file}", 200
+
+        # Caso não haja filter_param, processar normalmente
         concat_files = []
         if concat_params:
             concat_params_list = [param.strip() for param in concat_params.split(',')]
@@ -170,22 +251,27 @@ def filter_log_endpoint():
         if not all_output_files and not concat_files:
             return "No filtered files were created", 500
 
-        zip_filename = 'filtered_logs.zip'
+        # Auditoria do conteúdo processado
+        missing_lines, extra_lines = audit_processed_content(input_file_path, all_output_files + concat_files)
 
-        # Criar o ZIP no diretório temporário
+        checksum_log = generate_checksum(input_file_path, all_output_files + concat_files, output_dir)
+        all_output_files.append(checksum_log)
+
+        zip_filename = f"filtered_{os.path.splitext(input_file.filename)[0]}.zip"
+
         zip_filepath = create_and_save_zip(output_dir, all_output_files, concat_files, zip_filename, output_dir)
         if not zip_filepath:
             return "Failed to create ZIP file", 500
 
-        # Mover o ZIP para o diretório especificado
         final_zip_path = os.path.join(save_dir, zip_filename)
         shutil.move(zip_filepath, final_zip_path)
         print(f"ZIP file moved to {final_zip_path}")
 
-        # Limpar arquivos temporários
-        cleanup_files(output_dir, all_output_files, zip_filepath)
-
-        return f"Processing completed. The ZIP file is available at {final_zip_path}", 200
+        # Relatar linhas faltantes e extras (auditoria)
+        return (f"Processing completed. The ZIP file is available at {final_zip_path}\n"
+                f"Audit Report:\n"
+                f"Linhas no original que não foram processadas: {missing_lines}\n"
+                f"Linhas processadas que não estavam no original (possível duplicação ou erro): {extra_lines}"), 200
 
     except Exception as e:
         return f"An error occurred: {e}", 500
