@@ -27,7 +27,7 @@ def filter_urls(input_file, output_dir, concat_params_list):
             current_url = None
 
             for line in log_origin:
-                match = re.search(r'(GET|POST) (.*?) HTTP/1.1', line)
+                match = re.search(r'(GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD|TRACE|CONNECT) (.*?) HTTP/1.1', line)
                 if match:
                     url = match.group(2)
                     capture_lines = '*ERROR*' in line
@@ -160,7 +160,7 @@ def generate_checksum(input_file, all_output_files, output_dir):
 
     return checksum_log
 
-def audit_processed_content(input_file, all_output_files):
+def audit_processed_content(input_file, all_output_files, output_dir):
     input_lines_dict = {}
     processed_lines_dict = {}
 
@@ -175,23 +175,32 @@ def audit_processed_content(input_file, all_output_files):
             for line in f:
                 processed_lines_dict[line] = processed_lines_dict.get(line, 0) + 1
 
-    # Verificar linhas faltantes ou duplicadas
-    missing_lines = 0
+    missing_lines = []
     extra_lines = 0
 
+    # Identificar e registrar as linhas que estão faltando no processamento
     for line, count in input_lines_dict.items():
-        if line not in processed_lines_dict:
-            missing_lines += count
-        elif processed_lines_dict[line] < count:
-            missing_lines += (count - processed_lines_dict[line])
-        elif processed_lines_dict[line] > count:
-            extra_lines += (processed_lines_dict[line] - count)
+        if line not in processed_lines_dict or processed_lines_dict[line] < count:
+            missing_count = count - processed_lines_dict.get(line, 0)
+            for _ in range(missing_count):
+                missing_lines.append(line)
 
+    # Registrar as linhas que foram processadas em excesso (possível duplicação ou erro)
     for line, count in processed_lines_dict.items():
         if line not in input_lines_dict:
             extra_lines += count
+        elif processed_lines_dict[line] > input_lines_dict[line]:
+            extra_lines += (processed_lines_dict[line] - input_lines_dict[line])
 
-    return missing_lines, extra_lines
+    # Criar o relatório detalhado das linhas faltantes
+    missing_lines_file = os.path.join(output_dir, "missing_lines.log")
+    with open(missing_lines_file, 'w', encoding='utf-8') as log:
+        for line in missing_lines:
+            log.write(line)
+
+    print(f"Missing lines log created at {missing_lines_file}")
+
+    return missing_lines_file, extra_lines
 
 @app.route('/filter-log', methods=['POST'])
 def filter_log_endpoint():
@@ -252,13 +261,13 @@ def filter_log_endpoint():
             return "No filtered files were created", 500
 
         # Auditoria do conteúdo processado
-        missing_lines, extra_lines = audit_processed_content(input_file_path, all_output_files + concat_files)
+        missing_lines_file, extra_lines = audit_processed_content(input_file_path, all_output_files + concat_files, output_dir)
 
         checksum_log = generate_checksum(input_file_path, all_output_files + concat_files, output_dir)
-        all_output_files.append(checksum_log)
+        all_output_files.extend([checksum_log, missing_lines_file])
 
+        # Criação do arquivo ZIP e relatório final
         zip_filename = f"filtered_{os.path.splitext(input_file.filename)[0]}.zip"
-
         zip_filepath = create_and_save_zip(output_dir, all_output_files, concat_files, zip_filename, output_dir)
         if not zip_filepath:
             return "Failed to create ZIP file", 500
@@ -267,10 +276,9 @@ def filter_log_endpoint():
         shutil.move(zip_filepath, final_zip_path)
         print(f"ZIP file moved to {final_zip_path}")
 
-        # Relatar linhas faltantes e extras (auditoria)
         return (f"Processing completed. The ZIP file is available at {final_zip_path}\n"
                 f"Audit Report:\n"
-                f"Linhas no original que não foram processadas: {missing_lines}\n"
+                f"Missing lines are recorded in: {missing_lines_file}\n"
                 f"Linhas processadas que não estavam no original (possível duplicação ou erro): {extra_lines}"), 200
 
     except Exception as e:
