@@ -32,7 +32,8 @@ def filter_urls(input_file, output_dir, concat_params_list):
                     url = match.group(2)
                     capture_lines = '*ERROR*' in line
 
-                    if any(url.startswith(concat_param) for concat_param in concat_params_list):
+                    # Modificar para verificar a presença de qualquer substring no parâmetro de concatenação
+                    if any(concat_param in url for concat_param in concat_params_list):
                         current_url = None  # Ignore this URL
                         continue
 
