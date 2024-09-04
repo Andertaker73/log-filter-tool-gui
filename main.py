@@ -2,6 +2,7 @@ import os
 import tempfile
 import re
 import time
+from typing import List
 from flask import Flask, request
 from zipfile import ZipFile
 import shutil
@@ -101,7 +102,9 @@ def cleanup_files(output_dir, all_output_files, zip_filepath):
     except Exception as e:
         print(f"Falha na limpeza: {e}")
 
-def create_and_save_zip(all_output_files, concat_files, zip_filename, save_dir):
+
+def create_and_save_zip(all_output_files: List[str], concat_files: List[str], zip_filename: str,
+                        save_dir: str) -> str:
     try:
         added_files = set()
         zip_filepath = os.path.join(save_dir, zip_filename)
@@ -127,7 +130,7 @@ def create_and_save_zip(all_output_files, concat_files, zip_filename, save_dir):
         return zip_filepath  # Retorna o caminho para o arquivo ZIP salvo
     except Exception as e:
         print(f"Ocorreu um erro durante a criação do ZIP: {e}")
-        return None
+        return ""  # Retorna uma string vazia em vez de None
 
 def generate_checksum(input_file, all_output_files, output_dir):
     original_line_count = 0
@@ -226,19 +229,19 @@ def filter_log_endpoint():
         save_dir = request.form.get('save_dir', output_dir)
         os.makedirs(save_dir, exist_ok=True)
 
-        concat_params_list = []  # Inicializa concat_params_list como uma lista vazia
+        concat_params_list = []
 
         if filter_param:
-            # Gerar um único arquivo filtrado com o nome filtered_{url_sanitizada}.log
             sanitized_filter_param = sanitize_filename(filter_param.rstrip("/"))
             filtered_file = os.path.join(save_dir, f"filtered_{sanitized_filter_param}.log")
 
-            with open(input_file_path, 'r', encoding='utf-8') as log_origin, open(filtered_file, 'w', encoding='utf-8') as out_file:
+            with open(input_file_path, 'r', encoding='utf-8') as log_origin, open(filtered_file, 'w',
+                                                                                  encoding='utf-8') as out_file:
                 capture_lines = False
                 for line in log_origin:
                     if filter_param in line:
                         out_file.write(line)
-                        capture_lines = '*ERROR*' in line  # Iniciar a captura de linhas se *ERROR* for encontrado
+                        capture_lines = '*ERROR*' in line
                     elif capture_lines:
                         timestamp_match = re.match(r'\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}\.\d{3}', line)
                         if not timestamp_match:
@@ -246,10 +249,8 @@ def filter_log_endpoint():
                         else:
                             capture_lines = False
 
-            # Relatar conclusão
             return f"Processamento concluído. O arquivo de log está disponível em {filtered_file}", 200
 
-        # Caso não haja filter_param, processar normalmente
         concat_files = []
         if concat_params:
             concat_params_list = [param.strip() for param in concat_params.split(',')]
@@ -262,19 +263,21 @@ def filter_log_endpoint():
         if not all_output_files and not concat_files:
             return "Nenhum arquivo filtrado foi criado", 500
 
-        # Auditoria do conteúdo processado
-        missing_lines_file, extra_lines = audit_processed_content(input_file_path, all_output_files + concat_files, output_dir)
+        missing_lines_file, extra_lines = audit_processed_content(input_file_path, all_output_files + concat_files,
+                                                                  output_dir)
 
         checksum_log = generate_checksum(input_file_path, all_output_files + concat_files, output_dir)
         all_output_files.extend([checksum_log, missing_lines_file])
 
-        # Criação do arquivo ZIP e relatório final
         zip_filename = f"filtered_{os.path.splitext(input_file.filename)[0]}.zip"
         zip_filepath = create_and_save_zip(all_output_files, concat_files, zip_filename, output_dir)
+
+        # Verifique se o caminho do arquivo ZIP não é vazio
         if not zip_filepath:
             return "Falha ao criar o arquivo ZIP", 500
 
         final_zip_path = os.path.join(save_dir, zip_filename)
+
         shutil.move(zip_filepath, final_zip_path)
         print(f"Arquivo ZIP movido para {final_zip_path}")
 
