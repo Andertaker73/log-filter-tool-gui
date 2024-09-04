@@ -51,11 +51,12 @@ def filter_urls(input_file, output_dir, concat_params_list):
 
                     current_url = url
                     url_files[url].write(line)
-                elif capture_lines and current_url:
-                    # Anexar a linha subsequente se *ERROR* for encontrado e a linha não começar com um timestamp
+                elif capture_lines or line.lstrip().startswith("at "):
+                    # Anexar a linha subsequente se *ERROR* for encontrado ou se a linha começar com "at"
                     timestamp_match = re.match(r'\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}\.\d{3}', line)
                     if not timestamp_match:
-                        url_files[current_url].write(line)
+                        if current_url:  # Verifica se current_url está definido antes de escrever
+                            url_files[current_url].write(line)
                     else:
                         capture_lines = False
 
@@ -65,7 +66,8 @@ def filter_urls(input_file, output_dir, concat_params_list):
         print(f"Filtrado e criado {len(output_file_paths)} arquivos específicos de URL.")
         return output_file_paths
     except Exception as e:
-        raise Exception(f"Ocorreu um erro ao filtrar URLs: {e}")
+        print(f"Ocorreu um erro ao filtrar URLs: {e}")
+        raise  # Re-levanta a exceção para que possa ser tratada no nível superior
 
 def concat_requests(input_file, output_dir, concat_param):
     sanitized_base_name = sanitize_filename(concat_param.rstrip("/"))
