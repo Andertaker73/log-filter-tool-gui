@@ -2,10 +2,9 @@ import os
 import tempfile
 import re
 import time
-from flask import Flask, request, send_file
+from flask import Flask, request
 from zipfile import ZipFile
 import shutil
-from threading import Thread
 from werkzeug.serving import WSGIRequestHandler
 
 app = Flask(__name__)
@@ -34,7 +33,7 @@ def filter_urls(input_file, output_dir, concat_params_list):
 
                     # Modificar para verificar a presença de qualquer substring no parâmetro de concatenação
                     if any(concat_param in url for concat_param in concat_params_list):
-                        current_url = None  # Ignore this URL
+                        current_url = None  # Ignorar esta URL
                         continue
 
                     sanitized_url = sanitize_filename(url)
@@ -44,15 +43,15 @@ def filter_urls(input_file, output_dir, concat_params_list):
                         try:
                             url_files[url] = open(output_file, 'w', encoding='utf-8')
                             output_file_paths.append(output_file)
-                            print(f"Creating filtered file: {output_file}")
+                            print(f"Criando arquivo filtrado: {output_file}")
                         except Exception as e:
-                            print(f"Failed to create file {output_file}: {e}")
+                            print(f"Falha ao criar o arquivo {output_file}: {e}")
                             continue
 
                     current_url = url
                     url_files[url].write(line)
                 elif capture_lines and current_url:
-                    # Append the subsequent line if *ERROR* is found and the line doesn't start with a timestamp
+                    # Anexar a linha subsequente se *ERROR* for encontrado e a linha não começar com um timestamp
                     timestamp_match = re.match(r'\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}\.\d{3}', line)
                     if not timestamp_match:
                         url_files[current_url].write(line)
@@ -62,10 +61,10 @@ def filter_urls(input_file, output_dir, concat_params_list):
         for file in url_files.values():
             file.close()
 
-        print(f"Filtered and created {len(output_file_paths)} URL-specific files.")
+        print(f"Filtrado e criado {len(output_file_paths)} arquivos específicos de URL.")
         return output_file_paths
     except Exception as e:
-        raise Exception(f"An error occurred while filtering URLs: {e}")
+        raise Exception(f"Ocorreu um erro ao filtrar URLs: {e}")
 
 def concat_requests(input_file, output_dir, concat_param):
     sanitized_base_name = sanitize_filename(concat_param.rstrip("/"))
@@ -92,17 +91,17 @@ def cleanup_files(output_dir, all_output_files, zip_filepath):
         for file in all_output_files:
             if os.path.exists(file):
                 os.remove(file)
-                print(f"Deleted temporary file: {file}")
+                print(f"Arquivo temporário excluído: {file}")
         if os.path.exists(zip_filepath):
             os.remove(zip_filepath)
-            print(f"Deleted ZIP file: {zip_filepath}")
+            print(f"Arquivo ZIP excluído: {zip_filepath}")
         if os.path.exists(output_dir):
             shutil.rmtree(output_dir)
-            print(f"Deleted temporary directory: {output_dir}")
+            print(f"Diretório temporário excluído: {output_dir}")
     except Exception as e:
-        print(f"Cleanup failed: {e}")
+        print(f"Falha na limpeza: {e}")
 
-def create_and_save_zip(output_dir, all_output_files, concat_files, zip_filename, save_dir):
+def create_and_save_zip(all_output_files, concat_files, zip_filename, save_dir):
     try:
         added_files = set()
         zip_filepath = os.path.join(save_dir, zip_filename)
@@ -112,22 +111,22 @@ def create_and_save_zip(output_dir, all_output_files, concat_files, zip_filename
                 if os.path.exists(file) and file not in added_files:
                     zipf.write(file, os.path.basename(file))
                     added_files.add(file)
-                    print(f"Added to zip: {file}")
+                    print(f"Adicionado ao zip: {file}")
                 else:
-                    print(f"File already added or does not exist: {file}")
+                    print(f"Arquivo já adicionado ou não existe: {file}")
 
             for concat_file in concat_files:
                 if os.path.exists(concat_file) and concat_file not in added_files:
                     zipf.write(concat_file, os.path.basename(concat_file))
                     added_files.add(concat_file)
-                    print(f"Added concatenated file to zip: {concat_file}")
+                    print(f"Arquivo concatenado adicionado ao zip: {concat_file}")
                 else:
-                    print(f"Concatenated file already added or does not exist: {concat_file}")
+                    print(f"Arquivo concatenado já adicionado ou não existe: {concat_file}")
 
-        print(f"ZIP file saved at {zip_filepath}")
+        print(f"Arquivo ZIP salvo em {zip_filepath}")
         return zip_filepath  # Retorna o caminho para o arquivo ZIP salvo
     except Exception as e:
-        print(f"An error occurred during ZIP creation: {e}")
+        print(f"Ocorreu um erro durante a criação do ZIP: {e}")
         return None
 
 def generate_checksum(input_file, all_output_files, output_dir):
@@ -157,7 +156,7 @@ def generate_checksum(input_file, all_output_files, output_dir):
         log.write(f"Caracteres totais arquivo original: {original_char_count}\n")
         log.write(f"Caracteres totais processados: {processed_char_count}\n")
 
-    print(f"Checksum log created at {checksum_log}")
+    print(f"Relatório de checksum criado em {checksum_log}")
 
     return checksum_log
 
@@ -199,7 +198,7 @@ def audit_processed_content(input_file, all_output_files, output_dir):
         for line in missing_lines:
             log.write(line)
 
-    print(f"Missing lines log created at {missing_lines_file}")
+    print(f"Relatório de linhas faltantes criado em {missing_lines_file}")
 
     return missing_lines_file, extra_lines
 
@@ -207,25 +206,27 @@ def audit_processed_content(input_file, all_output_files, output_dir):
 def filter_log_endpoint():
     try:
         if 'log_file' not in request.files:
-            return "No file part in the request", 400
+            return "Nenhuma parte de arquivo na solicitação", 400
 
         input_file = request.files['log_file']
 
         if input_file.filename == '':
-            return "No selected file", 400
+            return "Nenhum arquivo selecionado", 400
 
         output_dir = os.path.join(tempfile.gettempdir(), 'log_filter_output')
         os.makedirs(output_dir, exist_ok=True)
 
         input_file_path = os.path.join(output_dir, input_file.filename)
         input_file.save(input_file_path)
-        print(f"File saved at {input_file_path}")
+        print(f"Arquivo salvo em {input_file_path}")
 
         filter_param = request.form.get('filter_param')
         concat_params = request.form.get('concat_params')
 
         save_dir = request.form.get('save_dir', output_dir)
         os.makedirs(save_dir, exist_ok=True)
+
+        concat_params_list = []  # Inicializa concat_params_list como uma lista vazia
 
         if filter_param:
             # Gerar um único arquivo filtrado com o nome filtered_{url_sanitizada}.log
@@ -237,7 +238,7 @@ def filter_log_endpoint():
                 for line in log_origin:
                     if filter_param in line:
                         out_file.write(line)
-                        capture_lines = '*ERROR*' in line  # Start capturing lines if *ERROR* is found
+                        capture_lines = '*ERROR*' in line  # Iniciar a captura de linhas se *ERROR* for encontrado
                     elif capture_lines:
                         timestamp_match = re.match(r'\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}\.\d{3}', line)
                         if not timestamp_match:
@@ -246,7 +247,7 @@ def filter_log_endpoint():
                             capture_lines = False
 
             # Relatar conclusão
-            return f"Processing completed. The log file is available at {filtered_file}", 200
+            return f"Processamento concluído. O arquivo de log está disponível em {filtered_file}", 200
 
         # Caso não haja filter_param, processar normalmente
         concat_files = []
@@ -256,10 +257,10 @@ def filter_log_endpoint():
                 concat_file = concat_requests(input_file_path, output_dir, concat_param)
                 concat_files.append(concat_file)
 
-        all_output_files = filter_urls(input_file_path, output_dir, concat_params_list if concat_params else [])
+        all_output_files = filter_urls(input_file_path, output_dir, concat_params_list)
 
         if not all_output_files and not concat_files:
-            return "No filtered files were created", 500
+            return "Nenhum arquivo filtrado foi criado", 500
 
         # Auditoria do conteúdo processado
         missing_lines_file, extra_lines = audit_processed_content(input_file_path, all_output_files + concat_files, output_dir)
@@ -269,21 +270,22 @@ def filter_log_endpoint():
 
         # Criação do arquivo ZIP e relatório final
         zip_filename = f"filtered_{os.path.splitext(input_file.filename)[0]}.zip"
-        zip_filepath = create_and_save_zip(output_dir, all_output_files, concat_files, zip_filename, output_dir)
+        zip_filepath = create_and_save_zip(all_output_files, concat_files, zip_filename, output_dir)
         if not zip_filepath:
-            return "Failed to create ZIP file", 500
+            return "Falha ao criar o arquivo ZIP", 500
 
         final_zip_path = os.path.join(save_dir, zip_filename)
         shutil.move(zip_filepath, final_zip_path)
-        print(f"ZIP file moved to {final_zip_path}")
+        print(f"Arquivo ZIP movido para {final_zip_path}")
 
-        return (f"Processing completed. The ZIP file is available at {final_zip_path}\n"
-                f"Audit Report:\n"
-                f"Missing lines are recorded in: {missing_lines_file}\n"
+        return (f"Processamento concluído. O arquivo ZIP está disponível em {final_zip_path}\n"
+                f"Relatório de Auditoria:\n"
+                f"Linhas faltantes registradas em: {missing_lines_file}\n"
                 f"Linhas processadas que não estavam no original (possível duplicação ou erro): {extra_lines}"), 200
 
     except Exception as e:
-        return f"An error occurred: {e}", 500
+        return f"Ocorreu um erro: {e}", 500
+
 
 if __name__ == '__main__':
     app.run(debug=True, threaded=True)
