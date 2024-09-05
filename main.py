@@ -198,7 +198,7 @@ def audit_processed_content(input_file, all_output_files, output_dir):
             extra_lines += (processed_lines_dict[line] - input_lines_dict[line])
 
     # Criar o relatório detalhado das linhas faltantes
-    missing_lines_file = os.path.join(output_dir, "missing_lines.log")
+    missing_lines_file = os.path.join(output_dir, "aem_processes.log")
     with open(missing_lines_file, 'w', encoding='utf-8') as log:
         for line in missing_lines:
             log.write(line)
@@ -207,6 +207,7 @@ def audit_processed_content(input_file, all_output_files, output_dir):
 
     return missing_lines_file, extra_lines
 
+@app.route('/filter-log', methods=['POST'])
 @app.route('/filter-log', methods=['POST'])
 def filter_log_endpoint():
     try:
@@ -265,11 +266,15 @@ def filter_log_endpoint():
         if not all_output_files and not concat_files:
             return "Nenhum arquivo filtrado foi criado", 500
 
-        missing_lines_file, extra_lines = audit_processed_content(input_file_path, all_output_files + concat_files,
-                                                                  output_dir)
+        # Realiza auditoria de linhas processadas
+        missing_lines_file, extra_lines = audit_processed_content(input_file_path, all_output_files + concat_files, output_dir)
 
+        # Adiciona o arquivo de linhas faltantes (aem_processes.log) aos arquivos processados
+        all_output_files.append(missing_lines_file)
+
+        # Gera o checksum
         checksum_log = generate_checksum(input_file_path, all_output_files + concat_files, output_dir)
-        all_output_files.extend([checksum_log, missing_lines_file])
+        all_output_files.append(checksum_log)
 
         zip_filename = f"filtered_{os.path.splitext(input_file.filename)[0]}.zip"
         zip_filepath = create_and_save_zip(all_output_files, concat_files, zip_filename, output_dir)
