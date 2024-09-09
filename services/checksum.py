@@ -86,7 +86,7 @@ def generate_checksum(input_file, all_output_files, output_dir):
 
     print(f"Relatório de checksum criado em {checksum_log}")
 
-    return checksum_log
+    return checksum_log, checksum_content
 
 def create_and_save_zip(all_output_files: List[str], concat_files: List[str], zip_filename: str,
                         save_dir: str) -> str:

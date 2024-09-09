@@ -76,8 +76,8 @@ def configure_routes(app):
             # Adiciona o arquivo de linhas faltantes (aem_processes.log) aos arquivos processados
             all_output_files.append(missing_lines_file)
 
-            # Gera o checksum
-            checksum_log = generate_checksum(input_file_path, all_output_files + concat_files, output_dir)
+            # Gera o checksum e obtém o conteúdo para a resposta
+            checksum_log, checksum_content = generate_checksum(input_file_path, all_output_files + concat_files, output_dir)
             all_output_files.append(checksum_log)
 
             zip_filename = f"filtered_{os.path.splitext(input_file.filename)[0]}.zip"
@@ -92,10 +92,11 @@ def configure_routes(app):
             shutil.move(zip_filepath, final_zip_path)
             print(f"Arquivo ZIP movido para {final_zip_path}")
 
+            # Retorna a resposta com formatação adequada para o checksum
+            formatted_checksum_content = f"<pre>\n{checksum_content}\n</pre>"
+
             return (f"Processamento concluído. O arquivo ZIP está disponível em {final_zip_path}\n"
-                    f"Relatório de Auditoria:\n"
-                    f"Linhas faltantes registradas em: {missing_lines_file}\n"
-                    f"Linhas processadas que não estavam no original (possível duplicação ou erro): {extra_lines}"), 200
+                    f"Checksum:\n{formatted_checksum_content}"), 200
 
         except Exception as e:
             return f"Ocorreu um erro: {e}", 500
