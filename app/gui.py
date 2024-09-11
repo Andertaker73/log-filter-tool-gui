@@ -36,8 +36,8 @@ class LogFilterApp(QMainWindow):
         self.log_file_button = QPushButton("Select Log File")
         self.log_file_label = QLabel("Log File:")
         self.log_file_button.clicked.connect(self.select_log_file)
-        layout.addWidget(self.log_file_label)
         layout.addWidget(self.log_file_button)
+        layout.addWidget(self.log_file_label)
 
         self.filter_param_label = QLabel("Filter Parameter:")
         self.filter_param_input = QLineEdit()
@@ -52,8 +52,8 @@ class LogFilterApp(QMainWindow):
         self.save_dir_label = QLabel("Save Directory:")
         self.save_dir_button = QPushButton("Select Save Directory")
         self.save_dir_button.clicked.connect(self.select_save_dir)
-        layout.addWidget(self.save_dir_label)
         layout.addWidget(self.save_dir_button)
+        layout.addWidget(self.save_dir_label)
 
         self.process_button = QPushButton("Process Log")
         self.process_button.clicked.connect(self.process_log)
