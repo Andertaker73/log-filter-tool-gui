@@ -1,5 +1,4 @@
-from app import create_app
+from app.gui import main
 
-if __name__ == '__main__':
-    app = create_app()
-    app.run(threaded=True)
+if __name__ == "__main__":
+    main()

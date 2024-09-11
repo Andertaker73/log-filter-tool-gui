@@ -1,0 +1,169 @@
+import sys
+import os
+import re
+import tempfile
+import shutil
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QPushButton, QVBoxLayout, QWidget, QLabel, QLineEdit, QTextEdit)
+from services.checksum import generate_checksum, create_and_save_zip
+from services.file_cleanup import cleanup_files
+from services.log_audit import audit_processed_content
+from services.log_concat import concat_requests
+from services.log_filter import sanitize_filename, filter_urls
+
+
+class LogFilterApp(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.log_file_button = None
+        self.log_file_label = None
+        self.log_file_path = None
+        self.filter_param_label = None
+        self.filter_param_input = None
+        self.concat_params_label = None
+        self.concat_params_input = None
+        self.save_dir = None
+        self.save_dir_label = None
+        self.save_dir_button = None
+        self.process_button = None
+        self.result_text = None
+        self.setWindowTitle("Log Filter Tool")
+        self.setGeometry(100, 100, 600, 400)
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QVBoxLayout()
+
+        self.log_file_button = QPushButton("Select Log File")
+        self.log_file_label = QLabel("Log File:")
+        self.log_file_button.clicked.connect(self.select_log_file)
+        layout.addWidget(self.log_file_label)
+        layout.addWidget(self.log_file_button)
+
+        self.filter_param_label = QLabel("Filter Parameter:")
+        self.filter_param_input = QLineEdit()
+        layout.addWidget(self.filter_param_label)
+        layout.addWidget(self.filter_param_input)
+
+        self.concat_params_label = QLabel("Concatenation Parameters (comma separated):")
+        self.concat_params_input = QLineEdit()
+        layout.addWidget(self.concat_params_label)
+        layout.addWidget(self.concat_params_input)
+
+        self.save_dir_label = QLabel("Save Directory:")
+        self.save_dir_button = QPushButton("Select Save Directory")
+        self.save_dir_button.clicked.connect(self.select_save_dir)
+        layout.addWidget(self.save_dir_label)
+        layout.addWidget(self.save_dir_button)
+
+        self.process_button = QPushButton("Process Log")
+        self.process_button.clicked.connect(self.process_log)
+        layout.addWidget(self.process_button)
+
+        self.result_text = QTextEdit()
+        self.result_text.setReadOnly(True)
+        layout.addWidget(self.result_text)
+
+        container = QWidget()
+        container.setLayout(layout)
+        self.setCentralWidget(container)
+
+    def select_log_file(self):
+        file_name, _ = QFileDialog.getOpenFileName(self, "Select Log File")
+        if file_name:
+            self.log_file_path = file_name
+            self.log_file_label.setText(f"Log File: {file_name}")
+
+    def select_save_dir(self):
+        directory = QFileDialog.getExistingDirectory(self, "Select Save Directory")
+        if directory:
+            self.save_dir = directory
+            self.save_dir_label.setText(f"Save Directory: {directory}")
+
+    def process_log(self):
+        try:
+            if not hasattr(self, 'log_file_path') or not hasattr(self, 'save_dir'):
+                self.result_text.setText("Please select both a log file and a save directory.")
+                return
+
+            input_file_path = self.log_file_path
+            output_dir = tempfile.mkdtemp(prefix='log_filter_output')
+            os.makedirs(output_dir, exist_ok=True)
+
+            filter_param = self.filter_param_input.text()
+            concat_params = self.concat_params_input.text()
+
+            concat_params_list = []
+            if filter_param:
+                sanitized_filter_param = sanitize_filename(filter_param.rstrip("/"))
+                filtered_file = os.path.join(self.save_dir, f"filtered_{sanitized_filter_param}.log")
+
+                with open(input_file_path, 'r', encoding='utf-8') as log_origin, open(filtered_file, 'w', encoding='utf-8') as out_file:
+                    capture_lines = False
+                    for line in log_origin:
+                        if filter_param in line:
+                            out_file.write(line)
+                            capture_lines = '*ERROR*' in line
+                        elif capture_lines:
+                            timestamp_match = re.match(r'\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}\.\d{3}', line)
+                            if not timestamp_match:
+                                out_file.write(line)
+                            else:
+                                capture_lines = False
+
+                self.result_text.setText(f"Processing completed. Log file is available at {filtered_file}")
+                return
+
+            concat_files = []
+            if concat_params:
+                concat_params_list = [param.strip() for param in concat_params.split(',')]
+                for concat_param in concat_params_list:
+                    concat_file = concat_requests(input_file_path, output_dir, concat_param)
+                    concat_files.append(concat_file)
+
+            all_output_files = filter_urls(input_file_path, output_dir, concat_params_list)
+
+            if not all_output_files and not concat_files:
+                self.result_text.setText("No filtered files were created")
+                return
+
+            # Perform audit
+            missing_lines_file, extra_lines = audit_processed_content(input_file_path, all_output_files + concat_files, output_dir)
+
+            all_output_files.append(missing_lines_file)
+
+            # Generate checksum
+            checksum_log, checksum_content = generate_checksum(input_file_path, all_output_files + concat_files, output_dir)
+            all_output_files.append(checksum_log)
+
+            zip_filename = f"filtered_{os.path.splitext(os.path.basename(input_file_path))[0]}.zip"
+            zip_filepath = create_and_save_zip(all_output_files, concat_files, zip_filename, output_dir)
+
+            if not zip_filepath:
+                self.result_text.setText("Failed to create ZIP file")
+                return
+
+            final_zip_path = os.path.join(self.save_dir, zip_filename)
+            shutil.move(zip_filepath, final_zip_path)
+
+            # Limpar arquivos temporários
+            cleanup_files(output_dir, all_output_files, zip_filepath)
+
+            formatted_checksum_content = f"<pre>\n{checksum_content}\n</pre>"
+            result_message = (f"Processing completed. ZIP file is available at {final_zip_path}\n"
+                              f"Checksum:\n{formatted_checksum_content}")
+
+            self.result_text.setHtml(result_message)
+
+        except Exception as e:
+            self.result_text.setText(f"An error occurred: {e}")
+
+
+def main():
+    app = QApplication(sys.argv)
+    window = LogFilterApp()
+    window.show()
+    sys.exit(app.exec_())
+
+
+if __name__ == "__main__":
+    main()
