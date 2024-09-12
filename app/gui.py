@@ -5,7 +5,8 @@ import shutil
 import pythoncom
 import os
 from win32com.client import Dispatch
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QPushButton, QVBoxLayout, QWidget, QLabel, QLineEdit, QTextEdit)
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QLineEdit, QTextEdit, QGroupBox, QMenuBar, QAction)
+from PyQt5.QtGui import QFont
 from services.checksum import generate_checksum, create_and_save_zip
 from services.file_cleanup import cleanup_files
 from services.log_audit import audit_processed_content
@@ -68,46 +69,69 @@ class LogFilterApp(QMainWindow):
         self.process_button = None
         self.result_text = None
         self.setWindowTitle("Log Filter Tool")
-        self.setGeometry(100, 100, 600, 400)
+        self.setGeometry(100, 100, 800, 600)
         self.init_ui()
 
     def init_ui(self):
         layout = QVBoxLayout()
 
-        # Adicionando o label e botão para escolher o diretório do arquivo .bat
-        self.create_shortcut_button = QPushButton("Criar atalho")
-        self.create_shortcut_button.clicked.connect(create_bat_file_and_shortcut)
-        layout.addWidget(self.create_shortcut_button)
+        # Adiciona o menu
+        menu_bar = self.menuBar()
+        file_menu = menu_bar.addMenu("Arquivo")
 
+        create_shortcut_action = QAction("Criar Atalho", self)
+        create_shortcut_action.triggered.connect(create_bat_file_and_shortcut)
+        file_menu.addAction(create_shortcut_action)
+
+        # Grupo para seleção de arquivo
+        file_group = QGroupBox("Seleção de Arquivo e Diretório")
+        file_layout = QVBoxLayout()
         self.log_file_button = QPushButton("Selecionar arquivo de log")
-        self.log_file_label = QLabel("Arquivo selecionado")
+        self.log_file_label = QLabel("Arquivo selecionado:")
         self.log_file_button.clicked.connect(self.select_log_file)
-        layout.addWidget(self.log_file_button)
-        layout.addWidget(self.log_file_label)
-
-        self.filter_param_label = QLabel("Filtrar por parâmetro (gera apenas um log):")
-        self.filter_param_input = QLineEdit()
-        layout.addWidget(self.filter_param_label)
-        layout.addWidget(self.filter_param_input)
-
-        self.concat_params_label = QLabel("Concatenar parâmetros (aceita múltiplos parametros – separar por vírgula):")
-        self.concat_params_input = QLineEdit()
-        layout.addWidget(self.concat_params_label)
-        layout.addWidget(self.concat_params_input)
+        file_layout.addWidget(self.log_file_button)
+        file_layout.addWidget(self.log_file_label)
 
         self.save_dir_button = QPushButton("Salvar em...")
         self.save_dir_label = QLabel("Diretório:")
         self.save_dir_button.clicked.connect(self.select_save_dir)
-        layout.addWidget(self.save_dir_button)
-        layout.addWidget(self.save_dir_label)
+        file_layout.addWidget(self.save_dir_button)
+        file_layout.addWidget(self.save_dir_label)
 
+        file_group.setLayout(file_layout)
+        layout.addWidget(file_group)
+
+        # Grupo para parâmetros de filtro
+        filter_group = QGroupBox("Parâmetros de Filtro")
+        filter_layout = QVBoxLayout()
+        self.filter_param_label = QLabel("Filtrar por parâmetro (resultará em apenas um log):")
+        self.filter_param_input = QLineEdit()
+        self.filter_param_input.setPlaceholderText("Ex: /content/b2b-ecommerceequipments-servlets/ecommerceEquipmentWebService./orgUsers/anonymous/carts")
+        filter_layout.addWidget(self.filter_param_label)
+        filter_layout.addWidget(self.filter_param_input)
+
+        self.concat_params_label = QLabel("Concatenar parâmetros (aceita múltiplos parametros – separar por vírgula e sem espaço):")
+        self.concat_params_input = QLineEdit()
+        self.concat_params_input.setPlaceholderText("Ex: url1,url2")
+        filter_layout.addWidget(self.concat_params_label)
+        filter_layout.addWidget(self.concat_params_input)
+
+        filter_group.setLayout(filter_layout)
+        layout.addWidget(filter_group)
+
+        # Grupo para o botão de processamento e resultado
+        process_group = QGroupBox("Processamento")
+        process_layout = QVBoxLayout()
         self.process_button = QPushButton("Processar log")
         self.process_button.clicked.connect(self.process_log)
-        layout.addWidget(self.process_button)
+        process_layout.addWidget(self.process_button)
 
         self.result_text = QTextEdit()
         self.result_text.setReadOnly(True)
-        layout.addWidget(self.result_text)
+        process_layout.addWidget(self.result_text)
+
+        process_group.setLayout(process_layout)
+        layout.addWidget(process_group)
 
         container = QWidget()
         container.setLayout(layout)
