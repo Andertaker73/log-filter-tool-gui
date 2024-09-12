@@ -84,45 +84,57 @@ class LogFilterApp(QMainWindow):
         file_menu.addAction(create_shortcut_action)
 
         # Grupo para seleção de arquivo
-        file_group = QGroupBox("Seleção de Arquivo e Diretório")
+        file_group = QGroupBox("Seleção de Arquivo")
         file_layout = QVBoxLayout()
-        self.log_file_button = QPushButton("Selecionar arquivo de log")
+        self.log_file_button = QPushButton("Selecionar arquivo .log")
         self.log_file_label = QLabel("Arquivo selecionado:")
         self.log_file_button.clicked.connect(self.select_log_file)
         file_layout.addWidget(self.log_file_button)
         file_layout.addWidget(self.log_file_label)
 
-        self.save_dir_button = QPushButton("Salvar em...")
-        self.save_dir_label = QLabel("Diretório:")
-        self.save_dir_button.clicked.connect(self.select_save_dir)
-        file_layout.addWidget(self.save_dir_button)
-        file_layout.addWidget(self.save_dir_label)
-
         file_group.setLayout(file_layout)
         layout.addWidget(file_group)
 
-        # Grupo para parâmetros de filtro
-        filter_group = QGroupBox("Parâmetros de Filtro")
-        filter_layout = QVBoxLayout()
+        # Grupo filter_param
+        filter_param_group = QGroupBox("")
+        filter_param_layout = QVBoxLayout()
         self.filter_param_label = QLabel("Filtrar por parâmetro (resultará em apenas um log):")
         self.filter_param_input = QLineEdit()
         self.filter_param_input.setPlaceholderText("Ex: /content/b2b-ecommerceequipments-servlets/ecommerceEquipmentWebService./orgUsers/anonymous/carts")
-        filter_layout.addWidget(self.filter_param_label)
-        filter_layout.addWidget(self.filter_param_input)
+        filter_param_layout.addWidget(self.filter_param_label)
+        filter_param_layout.addWidget(self.filter_param_input)
 
+        filter_param_group.setLayout(filter_param_layout)
+        layout.addWidget(filter_param_group)
+
+        # Grupo concat_params
+        concat_params_group = QGroupBox("")
+        concat_params_layout = QVBoxLayout()
         self.concat_params_label = QLabel("Concatenar parâmetros (aceita múltiplos parametros – separar por vírgula e sem espaço):")
         self.concat_params_input = QLineEdit()
         self.concat_params_input.setPlaceholderText("Ex: url1,url2")
-        filter_layout.addWidget(self.concat_params_label)
-        filter_layout.addWidget(self.concat_params_input)
+        concat_params_layout.addWidget(self.concat_params_label)
+        concat_params_layout.addWidget(self.concat_params_input)
 
-        filter_group.setLayout(filter_layout)
-        layout.addWidget(filter_group)
+        concat_params_group.setLayout(concat_params_layout)
+        layout.addWidget(concat_params_group)
+
+        # Grupo Salvar Arquivo
+        save_file_group = QGroupBox("Salvar...")
+        save_file_layout = QVBoxLayout()
+        self.save_dir_button = QPushButton("Selecionar destino")
+        self.save_dir_label = QLabel("Destino:")
+        self.save_dir_button.clicked.connect(self.select_save_dir)
+        save_file_layout.addWidget(self.save_dir_button)
+        save_file_layout.addWidget(self.save_dir_label)
+
+        save_file_group.setLayout(save_file_layout)
+        layout.addWidget(save_file_group)
 
         # Grupo para o botão de processamento e resultado
         process_group = QGroupBox("Processamento")
         process_layout = QVBoxLayout()
-        self.process_button = QPushButton("Processar log")
+        self.process_button = QPushButton("Processar arquivo")
         self.process_button.clicked.connect(self.process_log)
         process_layout.addWidget(self.process_button)
 
@@ -235,7 +247,6 @@ class LogFilterApp(QMainWindow):
 
         except Exception as e:
             self.result_text.setText(f"Ocorreu um erro: {e}")
-
 
 def main():
     app = QApplication(sys.argv)
