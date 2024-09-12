@@ -1,8 +1,10 @@
 import sys
-import os
 import re
 import tempfile
 import shutil
+import pythoncom
+import os
+from win32com.client import Dispatch
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QPushButton, QVBoxLayout, QWidget, QLabel, QLineEdit, QTextEdit)
 from services.checksum import generate_checksum, create_and_save_zip
 from services.file_cleanup import cleanup_files
@@ -11,9 +13,50 @@ from services.log_concat import concat_requests
 from services.log_filter import sanitize_filename, filter_urls
 
 
+def create_bat_file_and_shortcut():
+    # Caminho do projeto e nome do arquivo .bat
+    project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # Diretório do projeto
+    bat_file_path = os.path.join(project_dir, 'run_log_filter_tool.bat')
+
+    # Conteúdo do arquivo .bat
+    bat_content = '''@echo off
+    cd /d {project_dir}
+    call .venv\\Scripts\\activate
+    pythonw main.py
+    deactivate
+    '''.format(project_dir=project_dir)
+
+    # Escreve o arquivo .bat na raiz do projeto
+    with open(bat_file_path, 'w') as bat_file:
+        bat_file.write(bat_content)
+
+    # Solicita ao usuário o local para salvar o atalho
+    shortcut_dir = QFileDialog.getExistingDirectory(None, "Select Shortcut Save Directory")
+
+    if shortcut_dir:
+        # Caminho do atalho
+        shortcut_path = os.path.join(shortcut_dir, 'Atalho - LogFilterTool.lnk')
+
+        # Cria o atalho
+        pythoncom.CoInitialize()  # Necessário para evitar problemas em alguns sistemas
+        shell = Dispatch('WScript.Shell')
+        shortcut = shell.CreateShortCut(shortcut_path)
+
+        # Define o caminho para o arquivo .bat
+        shortcut.TargetPath = bat_file_path
+        shortcut.WorkingDirectory = project_dir
+        shortcut.WindowStyle = 7  # 7: Executar minimizado
+        shortcut.save()
+
+        return shortcut_path
+    else:
+        return None
+
+
 class LogFilterApp(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.create_shortcut_button = None
         self.log_file_button = None
         self.log_file_label = None
         self.log_file_path = None
@@ -32,6 +75,11 @@ class LogFilterApp(QMainWindow):
 
     def init_ui(self):
         layout = QVBoxLayout()
+
+        # Adicionando o label e botão para escolher o diretório do arquivo .bat
+        self.create_shortcut_button = QPushButton("Criar atalho")
+        self.create_shortcut_button.clicked.connect(create_bat_file_and_shortcut)
+        layout.addWidget(self.create_shortcut_button)
 
         self.log_file_button = QPushButton("Select Log File")
         self.log_file_label = QLabel("Log File:")
@@ -156,7 +204,6 @@ class LogFilterApp(QMainWindow):
 
         except Exception as e:
             self.result_text.setText(f"An error occurred: {e}")
-
 
 def main():
     app = QApplication(sys.argv)
