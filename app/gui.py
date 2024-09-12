@@ -127,7 +127,8 @@ class LogFilterApp(QMainWindow):
 
     def process_log(self):
         try:
-            if not hasattr(self, 'log_file_path') or not hasattr(self, 'save_dir'):
+            # Verifica se o arquivo de log e o diretório de salvamento foram selecionados
+            if not self.log_file_path or not self.save_dir:
                 self.result_text.setText("Por favor, selecione um arquivo de log e um diretório de salvamento.")
                 return
 
@@ -143,7 +144,8 @@ class LogFilterApp(QMainWindow):
                 sanitized_filter_param = sanitize_filename(filter_param.rstrip("/"))
                 filtered_file = os.path.join(self.save_dir, f"filtered_{sanitized_filter_param}.log")
 
-                with open(input_file_path, 'r', encoding='utf-8') as log_origin, open(filtered_file, 'w', encoding='utf-8') as out_file:
+                with open(input_file_path, 'r', encoding='utf-8') as log_origin, open(filtered_file, 'w',
+                                                                                      encoding='utf-8') as out_file:
                     capture_lines = False
                     for line in log_origin:
                         if filter_param in line:
@@ -173,12 +175,14 @@ class LogFilterApp(QMainWindow):
                 return
 
             # Realizar auditoria
-            missing_lines_file, extra_lines = audit_processed_content(input_file_path, all_output_files + concat_files, output_dir)
+            missing_lines_file, extra_lines = audit_processed_content(input_file_path, all_output_files + concat_files,
+                                                                      output_dir)
 
             all_output_files.append(missing_lines_file)
 
             # Gerar checksum
-            checksum_log, checksum_content = generate_checksum(input_file_path, all_output_files + concat_files, output_dir)
+            checksum_log, checksum_content = generate_checksum(input_file_path, all_output_files + concat_files,
+                                                               output_dir)
             all_output_files.append(checksum_log)
 
             zip_filename = f"filtered_{os.path.splitext(os.path.basename(input_file_path))[0]}.zip"
