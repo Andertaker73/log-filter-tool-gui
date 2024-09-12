@@ -127,6 +127,10 @@ class LogFilterApp(QMainWindow):
 
     def process_log(self):
         try:
+            # Exibir mensagem de processamento
+            self.result_text.setText("Processamento iniciado. Aguarde...")
+            QApplication.processEvents()
+
             # Verifica se o arquivo de log e o diretório de salvamento foram selecionados
             if not self.log_file_path or not self.save_dir:
                 self.result_text.setText("Por favor, selecione um arquivo de log e um diretório de salvamento.")
