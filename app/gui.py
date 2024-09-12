@@ -202,14 +202,16 @@ class LogFilterApp(QMainWindow):
             # Limpar arquivos temporários
             cleanup_files(output_dir, all_output_files, zip_filepath)
 
-            formatted_checksum_content = f"<pre>\n{checksum_content}\n</pre>"
-            result_message = (f"Processamento concluído. Arquivo ZIP disponível em {final_zip_path}\n"
-                              f"Checksum:\n{formatted_checksum_content}")
+            formatted_checksum_content = f"<pre>{checksum_content}</pre>"
+            result_message = (f"Processamento concluído.<br>"
+                              f"Arquivo ZIP disponível em <a href='{final_zip_path}'>{final_zip_path}</a><br>"
+                              f"<br>Checksum:{formatted_checksum_content}")
 
             self.result_text.setHtml(result_message)
 
         except Exception as e:
             self.result_text.setText(f"Ocorreu um erro: {e}")
+
 
 def main():
     app = QApplication(sys.argv)
