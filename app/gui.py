@@ -55,7 +55,7 @@ def create_bat_file_and_shortcut():
 class LogFilterApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.create_shortcut_button = None
+        # self.create_shortcut_button = None
         self.log_file_button = None
         self.log_file_label = None
         self.log_file_path = None
@@ -77,7 +77,7 @@ class LogFilterApp(QMainWindow):
 
         # Adiciona o menu
         menu_bar = self.menuBar()
-        file_menu = menu_bar.addMenu("Arquivo")
+        file_menu = menu_bar.addMenu("Ferramentas")
 
         create_shortcut_action = QAction("Criar Atalho", self)
         create_shortcut_action.triggered.connect(create_bat_file_and_shortcut)
@@ -87,7 +87,8 @@ class LogFilterApp(QMainWindow):
         file_group = QGroupBox("Seleção de Arquivo")
         file_layout = QVBoxLayout()
         self.log_file_button = QPushButton("Selecionar arquivo .log")
-        self.log_file_label = QLabel("Arquivo selecionado:")
+        self.log_file_button.setFixedSize(180, 30)  # Define o tamanho do botão
+        self.log_file_label = QLabel("Arquivo:")
         self.log_file_button.clicked.connect(self.select_log_file)
         file_layout.addWidget(self.log_file_button)
         file_layout.addWidget(self.log_file_label)
@@ -112,7 +113,7 @@ class LogFilterApp(QMainWindow):
         concat_params_layout = QVBoxLayout()
         self.concat_params_label = QLabel("Concatenar parâmetros (aceita múltiplos parametros – separar por vírgula e sem espaço):")
         self.concat_params_input = QLineEdit()
-        self.concat_params_input.setPlaceholderText("Ex: url1,url2")
+        self.concat_params_input.setPlaceholderText("Ex: URL1,URL2")
         concat_params_layout.addWidget(self.concat_params_label)
         concat_params_layout.addWidget(self.concat_params_input)
 
@@ -123,6 +124,7 @@ class LogFilterApp(QMainWindow):
         save_file_group = QGroupBox("Salvar...")
         save_file_layout = QVBoxLayout()
         self.save_dir_button = QPushButton("Selecionar destino")
+        self.save_dir_button.setFixedSize(180, 30)
         self.save_dir_label = QLabel("Destino:")
         self.save_dir_button.clicked.connect(self.select_save_dir)
         save_file_layout.addWidget(self.save_dir_button)
@@ -132,9 +134,10 @@ class LogFilterApp(QMainWindow):
         layout.addWidget(save_file_group)
 
         # Grupo para o botão de processamento e resultado
-        process_group = QGroupBox("Processamento")
+        process_group = QGroupBox("")
         process_layout = QVBoxLayout()
         self.process_button = QPushButton("Processar arquivo")
+        self.process_button.setFixedSize(180, 30)
         self.process_button.clicked.connect(self.process_log)
         process_layout.addWidget(self.process_button)
 
@@ -150,10 +153,10 @@ class LogFilterApp(QMainWindow):
         self.setCentralWidget(container)
 
     def select_log_file(self):
-        file_name, _ = QFileDialog.getOpenFileName(self, "Selecionar arquivo de log")
+        file_name, _ = QFileDialog.getOpenFileName(self, "Selecionar arquivo .log")
         if file_name:
             self.log_file_path = file_name
-            self.log_file_label.setText(f"Arquivo selecionado: {file_name}")
+            self.log_file_label.setText(f"Arquivo: {file_name}")
 
     def select_save_dir(self):
         directory = QFileDialog.getExistingDirectory(self, "Salvar em...")
