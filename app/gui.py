@@ -5,8 +5,7 @@ import shutil
 import pythoncom
 import os
 from win32com.client import Dispatch
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QLineEdit, QTextEdit, QGroupBox, QMenuBar, QAction)
-from PyQt5.QtGui import QFont
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QPushButton, QVBoxLayout, QWidget, QLabel, QLineEdit, QTextEdit, QGroupBox, QAction)
 from services.checksum import generate_checksum, create_and_save_zip
 from services.file_cleanup import cleanup_files
 from services.log_audit import audit_processed_content
@@ -56,19 +55,21 @@ class LogFilterApp(QMainWindow):
     def __init__(self):
         super().__init__()
         # Inicialização de variáveis
-        self.concat_params_inputs = []  # Lista para armazenar os campos de parâmetros de concatenação
         self.log_file_button = None
         self.log_file_label = None
         self.log_file_path = None
         self.filter_param_label = None
         self.filter_param_input = None
+        self.concat_params_layout = None
+        self.concat_params_inputs = []
+        self.add_param_button = None
         self.save_dir = None
         self.save_dir_label = None
         self.save_dir_button = None
         self.process_button = None
         self.result_text = None
         self.setWindowTitle("Log Filter Tool")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 800, 800)
         self.init_ui()
 
     def init_ui(self):
@@ -95,23 +96,23 @@ class LogFilterApp(QMainWindow):
         layout.addWidget(file_group)
 
         # Grupo filter_param
-        filter_param_group = QGroupBox("Filtrar por Parâmetro")
+        filter_param_group = QGroupBox("Filtrar")
         filter_param_layout = QVBoxLayout()
-        self.filter_param_label = QLabel("Filtrar por parâmetro (resultará em apenas um log):")
+        self.filter_param_label = QLabel("Por parâmetro (resultará em apenas um log):")
         self.filter_param_input = QLineEdit()
         self.filter_param_input.setPlaceholderText(
-            "Ex: /content/b2b-ecommerceequipments-servlets/ecommerceEquipmentWebService./orgUsers/anonymous/carts")
+            "Ex: /content/b2b-ecommerceequipments-servlets/ecommerceEquipmentWebService./orgUsers")
         filter_param_layout.addWidget(self.filter_param_label)
         filter_param_layout.addWidget(self.filter_param_input)
         filter_param_group.setLayout(filter_param_layout)
         layout.addWidget(filter_param_group)
 
         # Grupo concat_params
-        concat_params_group = QGroupBox("Concatenar parâmetros")
+        concat_params_group = QGroupBox("Concatenar relatórios")
         self.concat_params_layout = QVBoxLayout()
 
         # Botão para adicionar novo campo de parâmetro
-        self.add_param_button = QPushButton("Adicionar Parâmetro")
+        self.add_param_button = QPushButton("Adicionar parâmetro")
         self.add_param_button.setFixedSize(180, 30)
         self.add_param_button.clicked.connect(self.add_concat_param_field)
 
@@ -124,7 +125,7 @@ class LogFilterApp(QMainWindow):
         concat_params_group.setLayout(self.concat_params_layout)
         layout.addWidget(concat_params_group)
 
-        # Grupo Salvar Arquivo
+        # Grupo Salvar Resultado
         save_file_group = QGroupBox("Salvar resultado")
         save_file_layout = QVBoxLayout()
         self.save_dir_button = QPushButton("Selecionar destino")
@@ -157,29 +158,24 @@ class LogFilterApp(QMainWindow):
 
     def add_concat_param_field(self):
         new_input = QLineEdit()
-        new_input.setPlaceholderText("Ex: URL de parâmetro")
+        new_input.setPlaceholderText("Ex: content/b2b-ecommerceequipments-servlets/ecommerceEquipmentWebService./orgUsers/anonymous/orgUnits")
 
-        # Adiciona o novo campo acima do botão "+ Adicionar Parâmetro"
+        # Adiciona o novo campo acima do botão "Adicionar Parâmetro"
         self.concat_params_layout.insertWidget(self.concat_params_layout.count() - 1, new_input)
         self.concat_params_inputs.append(new_input)
 
-    # def add_concat_param_field(self, layout):
-    #     new_input = QLineEdit()
-    #     new_input.setPlaceholderText("Ex: URL de parâmetro")
-    #     layout.addWidget(new_input)
-    #     self.concat_params_inputs.append(new_input)
-
     def select_log_file(self):
-        file_name, _ = QFileDialog.getOpenFileName(self, "Selecionar arquivo .log")
+        downloads_path = os.path.join(os.path.expanduser("~"), "Downloads")
+        file_name, _ = QFileDialog.getOpenFileName(self, "Selecionar arquivo .log", downloads_path)
         if file_name:
             self.log_file_path = file_name
-            self.log_file_label.setText(f"Arquivo: {file_name}")
+            self.log_file_label.setText(f"Arquivo: <span style='color:blue'>{file_name}</span>")
 
     def select_save_dir(self):
         directory = QFileDialog.getExistingDirectory(self, "Salvar em...")
         if directory:
             self.save_dir = directory
-            self.save_dir_label.setText(f"Diretório de salvamento: {directory}")
+            self.save_dir_label.setText(f"Destino: <span style='color:blue'>{directory}</span>")
 
     def process_log(self):
         try:
@@ -187,17 +183,17 @@ class LogFilterApp(QMainWindow):
             QApplication.processEvents()
 
             if not self.log_file_path or not self.save_dir:
-                self.result_text.setText("Por favor, selecione um arquivo de log e um diretório de salvamento.")
+                self.result_text.setText("<span style='color: red'>Por favor, selecione um arquivo de log e um diretório de salvamento.<span>")
                 return
 
             input_file_path = self.log_file_path
             output_dir = tempfile.mkdtemp(prefix='log_filter_output')
             os.makedirs(output_dir, exist_ok=True)
 
-            filter_param = self.filter_param_input.text()
-            concat_params_list = [field.text() for field in self.concat_params_inputs if field.text()]
+            filter_param = self.filter_param_input.text().strip()
+            concat_params_list = [field.text().strip() for field in self.concat_params_inputs if field.text()]
 
-            # Condição 1: Se o filtro por parâmetro estiver preenchido, gera apenas o log filtrado
+            # Se o filtro por parâmetro estiver preenchido, gera apenas o log filtrado
             if filter_param:
                 sanitized_filter_param = sanitize_filename(filter_param.rstrip("/"))
                 filtered_file = os.path.join(self.save_dir, f"filtered_{sanitized_filter_param}.log")
@@ -216,13 +212,15 @@ class LogFilterApp(QMainWindow):
                             else:
                                 capture_lines = False
 
-                self.result_text.setText(f"Processamento concluído. Arquivo de log disponível em {filtered_file}")
+                result_message = (f"Processamento concluído.<br>"
+                                  f"Arquivo de log disponível em <a href='{filtered_file}'>{filtered_file}</a><br>")
+                self.result_text.setText(result_message)
                 return
 
-            # Condição 2: Se o filtro por parâmetro não estiver preenchido, gera a totalidade de logs
+            # Se o filtro por parâmetro não estiver preenchido, gera a totalidade de logs
             all_output_files = filter_urls(input_file_path, output_dir, concat_params_list) if not filter_param else []
 
-            # Condição 3: Se algum campo de concatenação estiver preenchido, realiza a concatenação
+            # Se algum campo de concatenação estiver preenchido, realiza a concatenação
             concat_files = []
             if concat_params_list:
                 for concat_param in concat_params_list:
