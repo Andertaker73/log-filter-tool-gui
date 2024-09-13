@@ -95,11 +95,12 @@ class LogFilterApp(QMainWindow):
         layout.addWidget(file_group)
 
         # Grupo filter_param
-        filter_param_group = QGroupBox("")
+        filter_param_group = QGroupBox("Filtrar por Parâmetro")
         filter_param_layout = QVBoxLayout()
         self.filter_param_label = QLabel("Filtrar por parâmetro (resultará em apenas um log):")
         self.filter_param_input = QLineEdit()
-        self.filter_param_input.setPlaceholderText("Ex: /content/b2b-ecommerceequipments-servlets/ecommerceEquipmentWebService./orgUsers/anonymous/carts")
+        self.filter_param_input.setPlaceholderText(
+            "Ex: /content/b2b-ecommerceequipments-servlets/ecommerceEquipmentWebService./orgUsers/anonymous/carts")
         filter_param_layout.addWidget(self.filter_param_label)
         filter_param_layout.addWidget(self.filter_param_input)
         filter_param_group.setLayout(filter_param_layout)
@@ -107,20 +108,20 @@ class LogFilterApp(QMainWindow):
 
         # Grupo concat_params
         concat_params_group = QGroupBox("Concatenar parâmetros")
-        concat_params_layout = QVBoxLayout()
-        self.concat_params_label = QLabel("Adicione parâmetros de concatenação:")
-        concat_params_layout.addWidget(self.concat_params_label)
-
-        # Adiciona o primeiro campo de parâmetro
-        self.add_concat_param_field(concat_params_layout)
+        self.concat_params_layout = QVBoxLayout()
 
         # Botão para adicionar novo campo de parâmetro
-        add_param_button = QPushButton("+ Adicionar Parâmetro")
-        add_param_button.setFixedSize(180, 30)
-        add_param_button.clicked.connect(lambda: self.add_concat_param_field(concat_params_layout))
-        concat_params_layout.addWidget(add_param_button)
+        self.add_param_button = QPushButton("Adicionar Parâmetro")
+        self.add_param_button.setFixedSize(180, 30)
+        self.add_param_button.clicked.connect(self.add_concat_param_field)
 
-        concat_params_group.setLayout(concat_params_layout)
+        # Adicionar o primeiro campo de parâmetro
+        self.add_concat_param_field()
+
+        # Adiciona o botão no final do layout
+        self.concat_params_layout.addWidget(self.add_param_button)
+
+        concat_params_group.setLayout(self.concat_params_layout)
         layout.addWidget(concat_params_group)
 
         # Grupo Salvar Arquivo
@@ -154,11 +155,19 @@ class LogFilterApp(QMainWindow):
         container.setLayout(layout)
         self.setCentralWidget(container)
 
-    def add_concat_param_field(self, layout):
+    def add_concat_param_field(self):
         new_input = QLineEdit()
         new_input.setPlaceholderText("Ex: URL de parâmetro")
-        layout.addWidget(new_input)
+
+        # Adiciona o novo campo acima do botão "+ Adicionar Parâmetro"
+        self.concat_params_layout.insertWidget(self.concat_params_layout.count() - 1, new_input)
         self.concat_params_inputs.append(new_input)
+
+    # def add_concat_param_field(self, layout):
+    #     new_input = QLineEdit()
+    #     new_input.setPlaceholderText("Ex: URL de parâmetro")
+    #     layout.addWidget(new_input)
+    #     self.concat_params_inputs.append(new_input)
 
     def select_log_file(self):
         file_name, _ = QFileDialog.getOpenFileName(self, "Selecionar arquivo .log")
