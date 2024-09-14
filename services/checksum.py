@@ -1,9 +1,6 @@
 import os
 import texttable as tt
 
-from typing import List
-from zipfile import ZipFile
-
 
 def generate_checksum(input_file, all_output_files, output_dir):
     original_line_count = 0
@@ -87,32 +84,3 @@ def generate_checksum(input_file, all_output_files, output_dir):
     print(f"Relatório de checksum criado em {checksum_log}")
 
     return checksum_log, checksum_content
-
-def create_and_save_zip(all_output_files: List[str], concat_files: List[str], zip_filename: str,
-                        save_dir: str) -> str:
-    try:
-        added_files = set()
-        zip_filepath = os.path.join(save_dir, zip_filename)
-
-        with ZipFile(zip_filepath, 'w') as zipf:
-            for file in all_output_files:
-                if os.path.exists(file) and file not in added_files:
-                    zipf.write(file, os.path.basename(file))
-                    added_files.add(file)
-                    print(f"Adicionado ao zip: {file}")
-                else:
-                    print(f"Arquivo já adicionado ou não existe: {file}")
-
-            for concat_file in concat_files:
-                if os.path.exists(concat_file) and concat_file not in added_files:
-                    zipf.write(concat_file, os.path.basename(concat_file))
-                    added_files.add(concat_file)
-                    print(f"Arquivo concatenado adicionado ao zip: {concat_file}")
-                else:
-                    print(f"Arquivo concatenado já adicionado ou não existe: {concat_file}")
-
-        print(f"Arquivo ZIP salvo em {zip_filepath}")
-        return zip_filepath  # Retorna o caminho para o arquivo ZIP salvo
-    except Exception as e:
-        print(f"Ocorreu um erro durante a criação do ZIP: {e}")
-        return ""  # Retorna uma string vazia em vez de None

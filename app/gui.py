@@ -1,18 +1,16 @@
 import sys
 import re
-import tempfile
-import shutil
-from pathlib import Path
-
 import pythoncom
 import os
+
+from pathlib import Path
 from win32com.client import Dispatch
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QPushButton, QVBoxLayout, QWidget, QLabel, QLineEdit, QTextEdit, QGroupBox, QAction)
-from services.checksum import generate_checksum, create_and_save_zip
-# from services.file_cleanup import cleanup_files
+from services.checksum import generate_checksum
 from services.log_audit import audit_processed_content
 from services.log_concat import concat_requests
 from services.log_filter import sanitize_filename, filter_urls
+
 
 def create_bat_file_and_shortcut():
     # Caminho do projeto e nome do arquivo .bat

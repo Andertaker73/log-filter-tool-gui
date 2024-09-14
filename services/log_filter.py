@@ -2,8 +2,6 @@ import os
 import re
 
 
-import re
-
 def sanitize_filename(url):
     sanitized = re.sub(r'[\\/*?:"<>|\r\n]', '_', url)
     sanitized = sanitized.strip('_')
