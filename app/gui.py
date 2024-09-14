@@ -2,6 +2,7 @@ import sys
 import re
 import pythoncom
 import os
+import time
 
 from pathlib import Path
 from win32com.client import Dispatch
@@ -67,6 +68,18 @@ def get_unique_path(base_path):
         if not new_path.exists():
             return new_path
         counter += 1
+
+def format_time(elapsed_time):
+    """Formata o tempo decorrido em horas, minutos e segundos."""
+    hours, remainder = divmod(elapsed_time, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    if hours > 0:
+        return f"{int(hours)}h {int(minutes)}min {int(seconds)}s"
+    elif minutes > 0:
+        return f"{int(minutes)}min {int(seconds)}s"
+    else:
+        return f"{int(seconds)}s"
 
 class LogFilterApp(QMainWindow):
     def __init__(self):
@@ -204,6 +217,9 @@ class LogFilterApp(QMainWindow):
                     "<span style='color: red'>Por favor, selecione um arquivo de log e um diretório de salvamento.<span>")
                 return
 
+            # Inicia o cronômetro
+            start_time = time.time()
+
             input_file_path = self.log_file_path
             filter_param = self.filter_param_input.text().strip()
             concat_params_list = [field.text().strip() for field in self.concat_params_inputs if field.text()]
@@ -227,7 +243,12 @@ class LogFilterApp(QMainWindow):
                             else:
                                 capture_lines = False
 
+                # Fim do cronômetro e cálculo do tempo decorrido
+                elapsed_time = time.time() - start_time
+                formatted_time = format_time(elapsed_time)
+
                 result_message = (f"Processamento concluído.<br>"
+                                  f"Tempo decorrido: {formatted_time}<br>"
                                   f"Arquivo de log disponível em:<br>"
                                   f"<a href='{filtered_file}'>{filtered_file}</a><br>")
                 self.result_text.setText(result_message)
@@ -258,8 +279,13 @@ class LogFilterApp(QMainWindow):
                                                                output_dir)
             all_output_files.append(checksum_log)
 
+            # Fim do cronômetro e cálculo do tempo decorrido
+            elapsed_time = time.time() - start_time
+            formatted_time = format_time(elapsed_time)
+
             formatted_checksum_content = f"<pre>{checksum_content}</pre>"
             result_message = (f"Processamento concluído.<br>"
+                              f"Tempo decorrido: {formatted_time}<br>"
                               f"Arquivo está disponível em:<br>"
                               f"<a href='{output_dir}'>{output_dir}</a><br>"
                               f"<br>Checksum:{formatted_checksum_content}")
