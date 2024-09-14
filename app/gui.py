@@ -53,23 +53,20 @@ def create_bat_file_and_shortcut():
 
 def get_unique_path(base_path):
     """
-    Verifica se o caminho já existe e, em caso afirmativo, adiciona um sufixo numérico.
-    Ex: filtered_publish_aemerror_edited -> filtered_publish_aemerror_edited(1)
+    Retorna um caminho único, adicionando um número incremental se necessário.
+    Exemplo:
+    - Se base_path for 'filtered_publish_aemerror_edited' e já existir, retorna 'filtered_publish_aemerror_edited(1)'
     """
     path = Path(base_path)
-    if path.exists():
-        counter = 1
-        while True:
-            # Adiciona o sufixo numérico antes da extensão (se for arquivo) ou ao nome da pasta
-            if path.is_file():
-                new_path = path.with_name(f"{path.stem}({counter}){path.suffix}")
-            else:
-                new_path = path.parent / f"{path.stem}({counter})"
+    if not path.exists():
+        return path
 
-            if not new_path.exists():
-                return new_path
-            counter += 1
-    return path
+    counter = 1
+    while True:
+        new_path = path.with_name(f"{path.stem}({counter}){path.suffix}")
+        if not new_path.exists():
+            return new_path
+        counter += 1
 
 class LogFilterApp(QMainWindow):
     def __init__(self):
