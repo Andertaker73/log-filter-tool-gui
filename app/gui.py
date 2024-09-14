@@ -2,12 +2,14 @@ import sys
 import re
 import tempfile
 import shutil
+from pathlib import Path
+
 import pythoncom
 import os
 from win32com.client import Dispatch
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QPushButton, QVBoxLayout, QWidget, QLabel, QLineEdit, QTextEdit, QGroupBox, QAction)
 from services.checksum import generate_checksum, create_and_save_zip
-from services.file_cleanup import cleanup_files
+# from services.file_cleanup import cleanup_files
 from services.log_audit import audit_processed_content
 from services.log_concat import concat_requests
 from services.log_filter import sanitize_filename, filter_urls
@@ -187,8 +189,11 @@ class LogFilterApp(QMainWindow):
                 return
 
             input_file_path = self.log_file_path
-            output_dir = tempfile.mkdtemp(prefix='log_filter_output')
-            os.makedirs(output_dir, exist_ok=True)
+
+            # Nomear a pasta com base no nome original do arquivo log
+            log_filename = Path(input_file_path).stem
+            output_dir = Path(self.save_dir) / f"filtered_{log_filename}"
+            output_dir.mkdir(parents=True, exist_ok=True)
 
             filter_param = self.filter_param_input.text().strip()
             concat_params_list = [field.text().strip() for field in self.concat_params_inputs if field.text()]
@@ -196,7 +201,7 @@ class LogFilterApp(QMainWindow):
             # Se o filtro por parâmetro estiver preenchido, gera apenas o log filtrado
             if filter_param:
                 sanitized_filter_param = sanitize_filename(filter_param.rstrip("/"))
-                filtered_file = os.path.join(self.save_dir, f"filtered_{sanitized_filter_param}.log")
+                filtered_file = Path(self.save_dir) / f"filtered_{sanitized_filter_param}.log"
 
                 with open(input_file_path, 'r', encoding='utf-8') as log_origin, open(filtered_file, 'w',
                                                                                       encoding='utf-8') as out_file:
@@ -213,7 +218,8 @@ class LogFilterApp(QMainWindow):
                                 capture_lines = False
 
                 result_message = (f"Processamento concluído.<br>"
-                                  f"Arquivo de log disponível em <a href='{filtered_file}'>{filtered_file}</a><br>")
+                                  f"Arquivo de log disponível em:<br>" 
+                                  f"<a href='{filtered_file}'>{filtered_file}</a><br>")
                 self.result_text.setText(result_message)
                 return
 
@@ -230,7 +236,7 @@ class LogFilterApp(QMainWindow):
                 self.result_text.setText("Nenhum arquivo foi criado")
                 return
 
-            # Auditoria, checksum e criação do ZIP
+            # Auditoria, checksum
             missing_lines_file, extra_lines = audit_processed_content(input_file_path, all_output_files + concat_files,
                                                                       output_dir)
             all_output_files.append(missing_lines_file)
@@ -238,22 +244,10 @@ class LogFilterApp(QMainWindow):
                                                                output_dir)
             all_output_files.append(checksum_log)
 
-            zip_filename = f"filtered_{os.path.splitext(os.path.basename(input_file_path))[0]}.zip"
-            zip_filepath = create_and_save_zip(all_output_files, concat_files, zip_filename, output_dir)
-
-            if not zip_filepath:
-                self.result_text.setText("Falha ao criar o arquivo ZIP")
-                return
-
-            final_zip_path = os.path.join(self.save_dir, zip_filename)
-            shutil.move(zip_filepath, final_zip_path)
-
-            # Limpar arquivos temporários
-            cleanup_files(output_dir, all_output_files, zip_filepath)
-
             formatted_checksum_content = f"<pre>{checksum_content}</pre>"
             result_message = (f"Processamento concluído.<br>"
-                              f"Arquivo ZIP disponível em <a href='{final_zip_path}'>{final_zip_path}</a><br>"
+                              f"Arquivo está disponível em:<br>"
+                              f"<a href='{output_dir}'>{output_dir}</a><br>"
                               f"<br>Checksum:{formatted_checksum_content}")
 
             self.result_text.setHtml(result_message)
