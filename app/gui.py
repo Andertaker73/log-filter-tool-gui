@@ -4,6 +4,7 @@ import pythoncom
 import os
 import time
 
+from PyQt5.QtCore import QTimer, QThread, pyqtSignal
 from pathlib import Path
 from win32com.client import Dispatch
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QPushButton, QVBoxLayout, QWidget, QLabel, QLineEdit, QTextEdit, QGroupBox, QAction)
@@ -81,6 +82,24 @@ def format_time(elapsed_time):
     else:
         return f"{int(seconds)}s"
 
+class LogProcessingThread(QThread):
+    progress = pyqtSignal(str)
+
+    def __init__(self, input_file_path, filter_param, concat_params_list, save_dir, log_filter_callback):
+        super().__init__()
+        self.input_file_path = input_file_path
+        self.filter_param = filter_param
+        self.concat_params_list = concat_params_list
+        self.save_dir = save_dir
+        self.log_filter_callback = log_filter_callback
+
+    def run(self):
+        try:
+            result_message = self.log_filter_callback(self.input_file_path, self.filter_param, self.concat_params_list, self.save_dir)
+            self.progress.emit(result_message)
+        except Exception as e:
+            self.progress.emit(f"Ocorreu um erro: {e}")
+
 class LogFilterApp(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -96,6 +115,8 @@ class LogFilterApp(QMainWindow):
         self.save_dir = None
         self.save_dir_label = None
         self.save_dir_button = None
+        self.start_time = None
+        self.timer = None
         self.process_button = None
         self.result_text = None
         self.setWindowTitle("Log Filter Tool")
@@ -207,6 +228,17 @@ class LogFilterApp(QMainWindow):
             self.save_dir = directory
             self.save_dir_label.setText(f"Destino: <span style='color:blue'>{directory}</span>")
 
+    def update_elapsed_time(self):
+        """Atualiza o tempo decorrido na interface a cada segundo."""
+        elapsed_time = time.time() - self.start_time
+        formatted_time = format_time(elapsed_time)
+        self.result_text.setText(f"Processamento iniciado. Aguarde...<br>Tempo decorrido: {formatted_time}")
+        QApplication.processEvents()
+
+    def on_processing_finished(self, result_message):
+        self.result_text.setHtml(result_message)
+        self.timer.stop()
+
     def process_log(self):
         try:
             self.result_text.setText("Processamento iniciado. Aguarde...")
@@ -217,83 +249,73 @@ class LogFilterApp(QMainWindow):
                     "<span style='color: red'>Por favor, selecione um arquivo de log e um diretório de salvamento.<span>")
                 return
 
-            # Inicia o cronômetro
-            start_time = time.time()
+            # Inicia o cronômetro e o timer para exibição do tempo decorrido em tempo real
+            self.start_time = time.time()
+            self.timer = QTimer()
+            self.timer.timeout.connect(self.update_elapsed_time)  # Conecta o método de atualização do tempo ao timer
+            self.timer.start(1000)  # Atualiza a cada segundo
 
             input_file_path = self.log_file_path
             filter_param = self.filter_param_input.text().strip()
             concat_params_list = [field.text().strip() for field in self.concat_params_inputs if field.text()]
 
-            # Se o filtro por parâmetro estiver preenchido, gera apenas o log filtrado
-            if filter_param:
-                sanitized_filter_param = sanitize_filename(filter_param.rstrip("/"))
-                filtered_file = get_unique_path(Path(self.save_dir) / f"filtered_{sanitized_filter_param}.log")
-
-                with open(input_file_path, 'r', encoding='utf-8') as log_origin, open(filtered_file, 'w',
-                                                                                      encoding='utf-8') as out_file:
-                    capture_lines = False
-                    for line in log_origin:
-                        if filter_param in line:
-                            out_file.write(line)
-                            capture_lines = '*ERROR*' in line
-                        elif capture_lines:
-                            timestamp_match = re.match(r'\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}\.\d{3}', line)
-                            if not timestamp_match:
-                                out_file.write(line)
-                            else:
-                                capture_lines = False
-
-                # Fim do cronômetro e cálculo do tempo decorrido
-                elapsed_time = time.time() - start_time
-                formatted_time = format_time(elapsed_time)
-
-                result_message = (f"Processamento concluído.<br>"
-                                  f"Tempo decorrido: {formatted_time}<br>"
-                                  f"Arquivo de log disponível em:<br>"
-                                  f"<a href='{filtered_file}'>{filtered_file}</a><br>")
-                self.result_text.setText(result_message)
-                return
-
-            # SE o filtro por parâmetro NÃO estiver preenchido, gera a totalidade de logs e cria a pasta
-            log_filename = Path(input_file_path).stem
-            output_dir = get_unique_path(Path(self.save_dir) / f"filtered_{log_filename}")
-            output_dir.mkdir(parents=True, exist_ok=True)
-
-            all_output_files = filter_urls(input_file_path, output_dir, concat_params_list)
-
-            # Se algum campo de concatenação estiver preenchido, realiza a concatenação
-            concat_files = []
-            if concat_params_list:
-                for concat_param in concat_params_list:
-                    concat_files.append(concat_requests(input_file_path, output_dir, concat_param))
-
-            if not all_output_files and not concat_files:
-                self.result_text.setText("Nenhum arquivo foi criado")
-                return
-
-            # Auditoria, checksum
-            missing_lines_file, extra_lines = audit_processed_content(input_file_path, all_output_files + concat_files,
-                                                                      output_dir)
-            all_output_files.append(missing_lines_file)
-            checksum_log, checksum_content = generate_checksum(input_file_path, all_output_files + concat_files,
-                                                               output_dir)
-            all_output_files.append(checksum_log)
-
-            # Fim do cronômetro e cálculo do tempo decorrido
-            elapsed_time = time.time() - start_time
-            formatted_time = format_time(elapsed_time)
-
-            formatted_checksum_content = f"<pre>{checksum_content}</pre>"
-            result_message = (f"Processamento concluído.<br>"
-                              f"Tempo decorrido: {formatted_time}<br>"
-                              f"Arquivo está disponível em:<br>"
-                              f"<a href='{output_dir}'>{output_dir}</a><br>"
-                              f"<br>Checksum:{formatted_checksum_content}")
-
-            self.result_text.setHtml(result_message)
+            # Inicia o processamento em uma thread separada
+            self.processing_thread = LogProcessingThread(input_file_path, filter_param, concat_params_list, self.save_dir, self.perform_log_processing)
+            self.processing_thread.progress.connect(self.on_processing_finished)
+            self.processing_thread.start()
 
         except Exception as e:
             self.result_text.setText(f"Ocorreu um erro: {e}")
+
+    def perform_log_processing(self, input_file_path, filter_param, concat_params_list, save_dir):
+        # Se o filtro por parâmetro estiver preenchido, gera apenas o log filtrado
+        if filter_param:
+            sanitized_filter_param = sanitize_filename(filter_param.rstrip("/"))
+            filtered_file = get_unique_path(Path(save_dir) / f"filtered_{sanitized_filter_param}.log")
+
+            with open(input_file_path, 'r', encoding='utf-8') as log_origin, open(filtered_file, 'w', encoding='utf-8') as out_file:
+                capture_lines = False
+                for line in log_origin:
+                    if filter_param in line:
+                        out_file.write(line)
+                        capture_lines = '*ERROR*' in line
+                    elif capture_lines:
+                        timestamp_match = re.match(r'\d{2}\.\d{2}\d{4} \d{2}:\d{2}:\d{2}\.\d{3}', line)
+                        if not timestamp_match:
+                            out_file.write(line)
+                        else:
+                            capture_lines = False
+
+            elapsed_time = time.time() - self.start_time
+            formatted_time = format_time(elapsed_time)
+            return (f"Processamento concluído.<br>Tempo decorrido: {formatted_time}<br>Arquivo de log disponível em:<br><a href='{filtered_file}'>{filtered_file}</a><br>")
+
+        # SE o filtro por parâmetro NÃO estiver preenchido, gera a totalidade de logs e cria a pasta
+        log_filename = Path(input_file_path).stem
+        output_dir = get_unique_path(Path(save_dir) / f"filtered_{log_filename}")
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        all_output_files = filter_urls(input_file_path, output_dir, concat_params_list)
+
+        # Se algum campo de concatenação estiver preenchido, realiza a concatenação
+        concat_files = []
+        if concat_params_list:
+            for concat_param in concat_params_list:
+                concat_files.append(concat_requests(input_file_path, output_dir, concat_param))
+
+        if not all_output_files and not concat_files:
+            return "Nenhum arquivo foi criado"
+
+        missing_lines_file, extra_lines = audit_processed_content(input_file_path, all_output_files + concat_files, output_dir)
+        all_output_files.append(missing_lines_file)
+        checksum_log, checksum_content = generate_checksum(input_file_path, all_output_files + concat_files, output_dir)
+        all_output_files.append(checksum_log)
+
+        elapsed_time = time.time() - self.start_time
+        formatted_time = format_time(elapsed_time)
+        formatted_checksum_content = f"<pre>{checksum_content}</pre>"
+        return (f"Processamento concluído.<br>Tempo decorrido: {formatted_time}<br>Arquivo está disponível em:<br><a href='{output_dir}'>{output_dir}</a><br><br>Checksum:{formatted_checksum_content}")
+
 
 def main():
     app = QApplication(sys.argv)
