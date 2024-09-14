@@ -51,6 +51,26 @@ def create_bat_file_and_shortcut():
     else:
         return None
 
+def get_unique_path(base_path):
+    """
+    Verifica se o caminho já existe e, em caso afirmativo, adiciona um sufixo numérico.
+    Ex: filtered_publish_aemerror_edited -> filtered_publish_aemerror_edited(1)
+    """
+    path = Path(base_path)
+    if path.exists():
+        counter = 1
+        while True:
+            # Adiciona o sufixo numérico antes da extensão (se for arquivo) ou ao nome da pasta
+            if path.is_file():
+                new_path = path.with_name(f"{path.stem}({counter}){path.suffix}")
+            else:
+                new_path = path.parent / f"{path.stem}({counter})"
+
+            if not new_path.exists():
+                return new_path
+            counter += 1
+    return path
+
 class LogFilterApp(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -183,23 +203,18 @@ class LogFilterApp(QMainWindow):
             QApplication.processEvents()
 
             if not self.log_file_path or not self.save_dir:
-                self.result_text.setText("<span style='color: red'>Por favor, selecione um arquivo de log e um diretório de salvamento.<span>")
+                self.result_text.setText(
+                    "<span style='color: red'>Por favor, selecione um arquivo de log e um diretório de salvamento.<span>")
                 return
 
             input_file_path = self.log_file_path
-
-            # Nomear a pasta com base no nome original do arquivo log
-            log_filename = Path(input_file_path).stem
-            output_dir = Path(self.save_dir) / f"filtered_{log_filename}"
-            output_dir.mkdir(parents=True, exist_ok=True)
-
             filter_param = self.filter_param_input.text().strip()
             concat_params_list = [field.text().strip() for field in self.concat_params_inputs if field.text()]
 
             # Se o filtro por parâmetro estiver preenchido, gera apenas o log filtrado
             if filter_param:
                 sanitized_filter_param = sanitize_filename(filter_param.rstrip("/"))
-                filtered_file = Path(self.save_dir) / f"filtered_{sanitized_filter_param}.log"
+                filtered_file = get_unique_path(Path(self.save_dir) / f"filtered_{sanitized_filter_param}.log")
 
                 with open(input_file_path, 'r', encoding='utf-8') as log_origin, open(filtered_file, 'w',
                                                                                       encoding='utf-8') as out_file:
@@ -216,13 +231,17 @@ class LogFilterApp(QMainWindow):
                                 capture_lines = False
 
                 result_message = (f"Processamento concluído.<br>"
-                                  f"Arquivo de log disponível em:<br>" 
+                                  f"Arquivo de log disponível em:<br>"
                                   f"<a href='{filtered_file}'>{filtered_file}</a><br>")
                 self.result_text.setText(result_message)
                 return
 
-            # Se o filtro por parâmetro não estiver preenchido, gera a totalidade de logs
-            all_output_files = filter_urls(input_file_path, output_dir, concat_params_list) if not filter_param else []
+            # SE o filtro por parâmetro NÃO estiver preenchido, gera a totalidade de logs e cria a pasta
+            log_filename = Path(input_file_path).stem
+            output_dir = get_unique_path(Path(self.save_dir) / f"filtered_{log_filename}")
+            output_dir.mkdir(parents=True, exist_ok=True)
+
+            all_output_files = filter_urls(input_file_path, output_dir, concat_params_list)
 
             # Se algum campo de concatenação estiver preenchido, realiza a concatenação
             concat_files = []
