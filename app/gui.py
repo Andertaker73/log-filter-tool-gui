@@ -104,6 +104,7 @@ class LogFilterApp(QMainWindow):
     def __init__(self):
         super().__init__()
         # Inicialização de variáveis
+        self.processing_thread = None
         self.log_file_button = None
         self.log_file_label = None
         self.log_file_path = None
@@ -288,7 +289,8 @@ class LogFilterApp(QMainWindow):
 
             elapsed_time = time.time() - self.start_time
             formatted_time = format_time(elapsed_time)
-            return (f"Processamento concluído.<br>Tempo decorrido: {formatted_time}<br>Arquivo de log disponível em:<br><a href='{filtered_file}'>{filtered_file}</a><br>")
+            return (f"Processamento concluído.<br>Tempo decorrido: {formatted_time}<br>"
+                    f"Arquivo de log disponível em:<br><a href='{filtered_file}'>{filtered_file}</a><br>")
 
         # SE o filtro por parâmetro NÃO estiver preenchido, gera a totalidade de logs e cria a pasta
         log_filename = Path(input_file_path).stem
@@ -314,7 +316,9 @@ class LogFilterApp(QMainWindow):
         elapsed_time = time.time() - self.start_time
         formatted_time = format_time(elapsed_time)
         formatted_checksum_content = f"<pre>{checksum_content}</pre>"
-        return (f"Processamento concluído.<br>Tempo decorrido: {formatted_time}<br>Arquivo está disponível em:<br><a href='{output_dir}'>{output_dir}</a><br><br>Checksum:{formatted_checksum_content}")
+        return (f"Processamento concluído.<br>Tempo decorrido: {formatted_time}<br>"
+                f"Arquivo está disponível em:<br><a href='{output_dir}'>{output_dir}</a><br><br>"
+                f"Checksum:{formatted_checksum_content}")
 
 
 def main():
