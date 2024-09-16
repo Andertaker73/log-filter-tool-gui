@@ -253,8 +253,8 @@ class LogFilterApp(QMainWindow):
             # Inicia o cronômetro e o timer para exibição do tempo decorrido em tempo real
             self.start_time = time.time()
             self.timer = QTimer()
-            self.timer.timeout.connect(self.update_elapsed_time)  # Conecta o método de atualização do tempo ao timer
-            self.timer.start(1000)  # Atualiza a cada segundo
+            self.timer.timeout.connect(self.update_elapsed_time)
+            self.timer.start(1000)
 
             input_file_path = self.log_file_path
             filter_param = self.filter_param_input.text().strip()
