@@ -4,12 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5643dd10-cac6-4ea6-b746-603b13f6308f" name="Changes" comment="Added &quot;Generate .bat file&quot; button">
-      <change afterPath="$PROJECT_DIR$/app/gui.py" afterDir="false" />
+    <list default="true" id="5643dd10-cac6-4ea6-b746-603b13f6308f" name="Changes" comment="some formating">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/file_cleanup.py" beforeDir="false" afterPath="$PROJECT_DIR$/services/file_cleanup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -37,12 +34,15 @@
     &quot;assignee&quot;: &quot;Andertaker73&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/Andertaker73/log-filter-tool.git&quot;,
-    &quot;accountId&quot;: &quot;b9725fa8-f0fc-46fb-818d-b5581fbc71c5&quot;
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/Andertaker73/log-filter-tool-gui.git",
+    "accountId": "b9725fa8-f0fc-46fb-818d-b5581fbc71c5"
   }
-}</component>
+}]]></component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/.venv/Lib/site-packages/pythoncom.py" root0="SKIP_INSPECTION" />
+  </component>
   <component name="ProblemsViewState">
     <option name="selectedTabId" value="CurrentFile" />
   </component>
@@ -63,7 +63,7 @@
     "Python.main.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "git-widget-placeholder": "local-interface-creation",
-    "settings.editor.selected.configurable": "vcs.Git"
+    "settings.editor.selected.configurable": "project.propVCSSupport.Confirmation"
   }
 }]]></component>
   <component name="RecentsManager">
@@ -130,7 +130,215 @@
       <option name="project" value="LOCAL" />
       <updated>1724770355950</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="fixed cleanup_files method not executing">
+      <option name="closed" value="true" />
+      <created>1726084957392</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1726084957392</updated>
+    </task>
+    <task id="LOCAL-00004" summary="added .bat file with shortcut for easy opening">
+      <option name="closed" value="true" />
+      <created>1726102896132</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1726102896132</updated>
+    </task>
+    <task id="LOCAL-00005" summary="translated messages, labels and buttons to pt-br">
+      <option name="closed" value="true" />
+      <created>1726104814969</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1726104814969</updated>
+    </task>
+    <task id="LOCAL-00006" summary="fixed error message on GUI">
+      <option name="closed" value="true" />
+      <created>1726105042476</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1726105042476</updated>
+    </task>
+    <task id="LOCAL-00007" summary="added info message after run process log button">
+      <option name="closed" value="true" />
+      <created>1726107696340</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1726107696340</updated>
+    </task>
+    <task id="LOCAL-00008" summary="fixed result message line breaking">
+      <option name="closed" value="true" />
+      <created>1726108011451</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1726108011451</updated>
+    </task>
+    <task id="LOCAL-00009" summary="GUI layout improvements">
+      <option name="closed" value="true" />
+      <created>1726110198379</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1726110198379</updated>
+    </task>
+    <task id="LOCAL-00010" summary="more GUI improvements">
+      <option name="closed" value="true" />
+      <created>1726111757792</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1726111757792</updated>
+    </task>
+    <task id="LOCAL-00011" summary="more GUI tweaks with buttons size">
+      <option name="closed" value="true" />
+      <created>1726112347489</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1726112347489</updated>
+    </task>
+    <task id="LOCAL-00012" summary="added multiple text fields for concat_params">
+      <option name="closed" value="true" />
+      <created>1726190794364</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1726190794364</updated>
+    </task>
+    <task id="LOCAL-00013" summary="always show add parameter button at the end">
+      <option name="closed" value="true" />
+      <created>1726233152689</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1726233152689</updated>
+    </task>
+    <task id="LOCAL-00014" summary="sanitize_filename method improved + added strip to inputs + tweaks">
+      <option name="closed" value="true" />
+      <created>1726259738004</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1726259738004</updated>
+    </task>
+    <task id="LOCAL-00015" summary="added Path lib for versatility">
+      <option name="closed" value="true" />
+      <created>1726278513637</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1726278513637</updated>
+    </task>
+    <task id="LOCAL-00016" summary="removed all unused files, methods and etc">
+      <option name="closed" value="true" />
+      <created>1726279923639</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1726279923639</updated>
+    </task>
+    <task id="LOCAL-00017" summary="added unique filename when same name exists">
+      <option name="closed" value="true" />
+      <created>1726281784189</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1726281784189</updated>
+    </task>
+    <task id="LOCAL-00018" summary="fixed counting not adapting">
+      <option name="closed" value="true" />
+      <created>1726282203561</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1726282203561</updated>
+    </task>
+    <task id="LOCAL-00019" summary="added process elapsed time">
+      <option name="closed" value="true" />
+      <created>1726283695605</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1726283695605</updated>
+    </task>
+    <task id="LOCAL-00020" summary="added realtime timer update">
+      <option name="closed" value="true" />
+      <created>1726285415537</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1726285415537</updated>
+    </task>
+    <task id="LOCAL-00021" summary="code formatting and warning fixes">
+      <option name="closed" value="true" />
+      <created>1726494537533</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1726494537533</updated>
+    </task>
+    <task id="LOCAL-00022" summary="removed a few comments">
+      <option name="closed" value="true" />
+      <created>1726497074528</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1726497074528</updated>
+    </task>
+    <task id="LOCAL-00023" summary="modularization - shortcut creation &amp; added confirmation message">
+      <option name="closed" value="true" />
+      <created>1726509579938</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1726509579938</updated>
+    </task>
+    <task id="LOCAL-00024" summary="added adaptable shortcut path message">
+      <option name="closed" value="true" />
+      <created>1726510815799</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1726510815799</updated>
+    </task>
+    <task id="LOCAL-00025" summary="modularization - added utils file and moved get_unique_path &amp; format_time methods">
+      <option name="closed" value="true" />
+      <created>1726511312142</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1726511312142</updated>
+    </task>
+    <task id="LOCAL-00026" summary="modularization - added log_processing and moved class LogProcessingThread">
+      <option name="closed" value="true" />
+      <created>1726512069081</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1726512069081</updated>
+    </task>
+    <task id="LOCAL-00027" summary="added adaptable path message for select_log_file and select_save_dir">
+      <option name="closed" value="true" />
+      <created>1726513412939</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1726513412939</updated>
+    </task>
+    <task id="LOCAL-00028" summary="some formating">
+      <option name="closed" value="true" />
+      <created>1726513861890</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1726513861890</updated>
+    </task>
+    <option name="localTasksCounter" value="29" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -157,8 +365,31 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="First commit - basic logic and interface" />
-    <MESSAGE value="Added &quot;Generate .bat file&quot; button" />
-    <option name="LAST_COMMIT_MESSAGE" value="Added &quot;Generate .bat file&quot; button" />
+    <MESSAGE value="added .bat file with shortcut for easy opening" />
+    <MESSAGE value="translated messages, labels and buttons to pt-br" />
+    <MESSAGE value="fixed error message on GUI" />
+    <MESSAGE value="added info message after run process log button" />
+    <MESSAGE value="fixed result message line breaking" />
+    <MESSAGE value="GUI layout improvements" />
+    <MESSAGE value="more GUI improvements" />
+    <MESSAGE value="more GUI tweaks with buttons size" />
+    <MESSAGE value="added multiple text fields for concat_params" />
+    <MESSAGE value="always show add parameter button at the end" />
+    <MESSAGE value="sanitize_filename method improved + added strip to inputs + tweaks" />
+    <MESSAGE value="added Path lib for versatility" />
+    <MESSAGE value="removed all unused files, methods and etc" />
+    <MESSAGE value="added unique filename when same name exists" />
+    <MESSAGE value="fixed counting not adapting" />
+    <MESSAGE value="added process elapsed time" />
+    <MESSAGE value="added realtime timer update" />
+    <MESSAGE value="code formatting and warning fixes" />
+    <MESSAGE value="removed a few comments" />
+    <MESSAGE value="modularization - shortcut creation &amp; added confirmation message" />
+    <MESSAGE value="added adaptable shortcut path message" />
+    <MESSAGE value="modularization - added utils file and moved get_unique_path &amp; format_time methods" />
+    <MESSAGE value="modularization - added log_processing and moved class LogProcessingThread" />
+    <MESSAGE value="added adaptable path message for select_log_file and select_save_dir" />
+    <MESSAGE value="some formating" />
+    <option name="LAST_COMMIT_MESSAGE" value="some formating" />
   </component>
 </project>

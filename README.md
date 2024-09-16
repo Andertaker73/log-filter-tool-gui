@@ -1,19 +1,19 @@
 # Log Filter Tool
 
 ## Descrição
-Esta ferramenta processa, filtra e concatena arquivos de log.
+Esta é uma versão desktop da ferramenta Log Filter Tool, que processa, filtra e concatena arquivos de log. 
+A aplicação foi adaptada para rodar localmente, utilizando uma interface gráfica (GUI) construída com PyQt5.
 
 ## Requisitos
 - Python 3.8+
-- Flask
-- texttable
+- PyQt5
 
 ## Instalação
 
 ### Clonar o repositório
 ```
-git clone https://github.com/Andertaker73/log-filter-tool.git
-cd log_filter_tool
+git clone https://github.com/Andertaker73/log-filter-tool-local-gui.git
+cd log-filter-tool-gui
 ```
 ### Ativar o ambiente virtual
 
@@ -36,14 +36,19 @@ pip install -r requirements.txt
 python main.py
 ```
 
-## Uso
-Realize a importação da requisição utilizando o cURL abaixo:
-```
-curl --location 'http://127.0.0.1:5000/filter-log' \
---form 'log_file=@"/path/to/file"' \
---form 'concat_params="content/b2b-ecommerceequipments-servlets/ecommerceEquipmentWebService./orgUsers/anonymous/carts,content/b2b-ecommerceequipments-servlets/ecommerceEquipmentWebService./orgUsers/anonymous/orgUnits"' \
---form 'save_dir="C:\\Projetos\\AEM\\vivo\\automation"'
-```
+## Funcionalidades
 
-Envie arquivos de log no endpoint /filter-log com os parâmetros desejados para filtrar e gerar os arquivos processados.
+- Selecionar arquivo de log: Abra um arquivo .log a partir da interface gráfica para ser processado.
+- Filtrar logs: Aplique filtros para isolar URLs específicas ou outras entradas no arquivo de log.
+- Concatenar logs: Insira múltiplos parâmetros de concatenação para unir logs de acordo com o critério fornecido.
+- Salvar arquivos processados: Selecione o diretório onde deseja salvar os arquivos filtrados e concatenados.
+- Criar Atalho: Crie um atalho na área de trabalho (ou onde quiser) para execução rápida da aplicação.
 
+## Observação
+
+Esta versão foi desenvolvida para rodar de forma independente, sem necessidade de servidor ou API. 
+Todos os arquivos gerados serão salvos localmente no diretório escolhido pelo usuário através da interface.
+
+## Dependências
+
+As dependências estão listadas no arquivo requirements.txt, que inclui as bibliotecas necessárias para a interface gráfica, manipulação de logs e criação de atalhos no Windows.
