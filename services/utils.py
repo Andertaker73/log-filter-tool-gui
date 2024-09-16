@@ -19,7 +19,7 @@ def get_unique_path(base_path):
         counter += 1
 
 def format_time(elapsed_time):
-    """Formata o tempo decorrido em horas, minutos e segundos."""
+    # Formata o tempo decorrido em horas, minutos e segundos
     hours, remainder = divmod(elapsed_time, 3600)
     minutes, seconds = divmod(remainder, 60)
 

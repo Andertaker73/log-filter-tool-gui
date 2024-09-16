@@ -1,9 +1,8 @@
 import sys
 import re
-import os
 import time
 
-from PyQt5.QtCore import QTimer, QThread, pyqtSignal
+from PyQt5.QtCore import QTimer
 from pathlib import Path
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QPushButton, QVBoxLayout, QWidget, QLabel,
                              QLineEdit, QTextEdit, QGroupBox, QAction)
@@ -50,7 +49,6 @@ class LogFilterApp(QMainWindow):
         create_shortcut_action = QAction("Criar Atalho", self)
         create_shortcut_action.triggered.connect(create_bat_file_and_shortcut)
         file_menu.addAction(create_shortcut_action)
-
 
         # Grupo para seleção de arquivo
         file_group = QGroupBox("Seleção de Arquivo")
@@ -151,7 +149,7 @@ class LogFilterApp(QMainWindow):
             self.save_dir_label.setText(f"Destino: <span style='color:blue'>{formatted_path}</span>")
 
     def update_elapsed_time(self):
-        """Atualiza o tempo decorrido na interface a cada segundo."""
+        # Atualiza o tempo decorrido na interface a cada segundo
         elapsed_time = time.time() - self.start_time
         formatted_time = format_time(elapsed_time)
         self.result_text.setText(f"Processamento iniciado. Aguarde...<br>Tempo decorrido: {formatted_time}")
@@ -213,7 +211,7 @@ class LogFilterApp(QMainWindow):
             return (f"Processamento concluído.<br>Tempo decorrido: {formatted_time}<br>"
                     f"Arquivo de log disponível em:<br><a href='{filtered_file}'>{filtered_file}</a><br>")
 
-        # SE o filtro por parâmetro NÃO estiver preenchido, gera a totalidade de logs e cria a pasta
+        # Se o filtro por parâmetro NÃO estiver preenchido, gera a totalidade de logs e cria a pasta
         log_filename = Path(input_file_path).stem
         output_dir = get_unique_path(Path(save_dir) / f"filtered_{log_filename}")
         output_dir.mkdir(parents=True, exist_ok=True)

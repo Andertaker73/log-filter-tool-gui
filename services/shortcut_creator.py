@@ -4,6 +4,7 @@ from pathlib import Path
 from PyQt5.QtWidgets import QFileDialog, QMessageBox
 from win32com.client import Dispatch
 
+
 def create_bat_file_and_shortcut():
     project_dir = Path(__file__).resolve().parent.parent
     bat_file_path = project_dir / 'run_log_filter_tool.bat'
