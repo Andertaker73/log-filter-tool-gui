@@ -1,57 +1,18 @@
 import sys
 import re
-import pythoncom
 import os
 import time
 
 from PyQt5.QtCore import QTimer, QThread, pyqtSignal
 from pathlib import Path
-from win32com.client import Dispatch
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QPushButton, QVBoxLayout, QWidget, QLabel, QLineEdit, QTextEdit, QGroupBox, QAction)
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QPushButton, QVBoxLayout, QWidget, QLabel,
+                             QLineEdit, QTextEdit, QGroupBox, QAction)
 from services.checksum import generate_checksum
 from services.log_audit import audit_processed_content
 from services.log_concat import concat_requests
 from services.log_filter import sanitize_filename, filter_urls
+from services.shortcut_creator import create_bat_file_and_shortcut
 
-
-def create_bat_file_and_shortcut():
-    # Caminho do projeto e nome do arquivo .bat
-    project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # Diretório do projeto
-    bat_file_path = os.path.join(project_dir, 'run_log_filter_tool.bat')
-
-    # Conteúdo do arquivo .bat
-    bat_content = '''@echo off
-    cd /d {project_dir}
-    call .venv\\Scripts\\activate
-    pythonw main.py
-    deactivate
-    '''.format(project_dir=project_dir)
-
-    # Escreve o arquivo .bat na raiz do projeto
-    with open(bat_file_path, 'w') as bat_file:
-        bat_file.write(bat_content)
-
-    # Solicita ao usuário o local para salvar o atalho
-    shortcut_dir = QFileDialog.getExistingDirectory(None, "Selecionar diretório para salvar o atalho")
-
-    if shortcut_dir:
-        # Caminho do atalho
-        shortcut_path = os.path.join(shortcut_dir, 'Atalho - LogFilterTool.lnk')
-
-        # Cria o atalho
-        pythoncom.CoInitialize()  # Necessário para evitar problemas em alguns sistemas
-        shell = Dispatch('WScript.Shell')
-        shortcut = shell.CreateShortCut(shortcut_path)
-
-        # Define o caminho para o arquivo .bat
-        shortcut.TargetPath = bat_file_path
-        shortcut.WorkingDirectory = project_dir
-        shortcut.WindowStyle = 7  # 7: Executar minimizado
-        shortcut.save()
-
-        return shortcut_path
-    else:
-        return None
 
 def get_unique_path(base_path):
     """
@@ -134,6 +95,7 @@ class LogFilterApp(QMainWindow):
         create_shortcut_action = QAction("Criar Atalho", self)
         create_shortcut_action.triggered.connect(create_bat_file_and_shortcut)
         file_menu.addAction(create_shortcut_action)
+
 
         # Grupo para seleção de arquivo
         file_group = QGroupBox("Seleção de Arquivo")
