@@ -134,17 +134,21 @@ class LogFilterApp(QMainWindow):
         self.concat_params_inputs.append(new_input)
 
     def select_log_file(self):
-        downloads_path = os.path.join(os.path.expanduser("~"), "Downloads")
-        file_name, _ = QFileDialog.getOpenFileName(self, "Selecionar arquivo .log", downloads_path)
+        downloads_path = Path.home() / "Downloads"
+        file_name, _ = QFileDialog.getOpenFileName(self, "Selecionar arquivo .log", str(downloads_path))
+
         if file_name:
-            self.log_file_path = file_name
-            self.log_file_label.setText(f"Arquivo: <span style='color:blue'>{file_name}</span>")
+            self.log_file_path = Path(file_name)
+            formatted_path = self.log_file_path.as_posix() if not self.log_file_path.is_absolute() else str(self.log_file_path)
+            self.log_file_label.setText(f"Arquivo: <span style='color:blue'>{formatted_path}</span>")
 
     def select_save_dir(self):
         directory = QFileDialog.getExistingDirectory(self, "Salvar em...")
+
         if directory:
-            self.save_dir = directory
-            self.save_dir_label.setText(f"Destino: <span style='color:blue'>{directory}</span>")
+            self.save_dir = Path(directory)
+            formatted_path = self.save_dir.as_posix() if not self.save_dir.is_absolute() else str(self.save_dir)
+            self.save_dir_label.setText(f"Destino: <span style='color:blue'>{formatted_path}</span>")
 
     def update_elapsed_time(self):
         """Atualiza o tempo decorrido na interface a cada segundo."""
