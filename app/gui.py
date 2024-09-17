@@ -192,7 +192,7 @@ class LogFilterApp(QMainWindow):
         if filter_param:
             return self.process_filtered_log(input_file_path, filter_param, save_dir)
 
-        # Se o filtro por parâmetro NÃO estiver preenchido, gera a totalidade de logs
+        # Se o filtro por parâmetro NÃO estiver preenchido, gera a totalidade de logs e cria a pasta
         output_dir = create_output_directory(input_file_path, save_dir)
         all_output_files = filter_urls(input_file_path, output_dir, concat_params_list)
 
@@ -214,21 +214,24 @@ class LogFilterApp(QMainWindow):
                                                                               encoding='utf-8') as out_file:
             capture_lines = False
             for line in log_origin:
-                if filter_param in line:  # Captura todas as linhas que contêm o parâmetro de filtro
+                if filter_param in line:
                     out_file.write(line)
-                    capture_lines = True  # Inicia a captura de linhas subsequentes
+                    capture_lines = '*ERROR*' in line
                 elif capture_lines:
-                    # Verifica se a linha seguinte é parte do erro (ou seja, se não é um timestamp de nova entrada)
                     timestamp_match = re.match(r'\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}\.\d{3}', line)
                     if not timestamp_match:
                         out_file.write(line)
                     else:
-                        capture_lines = False  # Para de capturar quando encontrar um novo timestamp
+                        capture_lines = False
+
+        # Calcular o checksum do arquivo filtrado
+        checksum_log, checksum_content = generate_checksum(input_file_path, [filtered_file], save_dir)
 
         elapsed_time = time.time() - self.start_time
         formatted_time = format_time(elapsed_time)
         return (f"Processamento concluído.<br>Tempo decorrido: {formatted_time}<br>"
-                f"Arquivo de log disponível em:<br><a href='{filtered_file}'>{filtered_file}</a><br>")
+                f"Arquivo de log disponível em:<br><a href='{filtered_file}'>{filtered_file}</a><br><br>"
+                f"Checksum:<br><pre>{checksum_content}</pre>")
 
     def audit_and_generate_checksum(self, input_file_path, all_output_files, concat_files, output_dir):
         all_files = all_output_files + concat_files
