@@ -8,11 +8,11 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QPushButton
                              QLineEdit, QTextEdit, QGroupBox, QAction)
 from services.checksum import generate_checksum
 from services.log_audit import audit_processed_content
-from services.log_concat import concat_requests
+from services.log_concat import concat_logs
 from services.log_filter import sanitize_filename, filter_urls
 from services.log_processing import LogProcessingThread
 from services.shortcut_creator import create_bat_file_and_shortcut
-from services.utils import get_unique_path, format_time
+from services.utils import get_unique_path, format_time, create_output_directory
 
 
 class LogFilterApp(QMainWindow):
@@ -193,11 +193,11 @@ class LogFilterApp(QMainWindow):
             return self.process_filtered_log(input_file_path, filter_param, save_dir)
 
         # Se o filtro por parâmetro NÃO estiver preenchido, gera a totalidade de logs
-        output_dir = self.create_output_directory(input_file_path, save_dir)
+        output_dir = create_output_directory(input_file_path, save_dir)
         all_output_files = filter_urls(input_file_path, output_dir, concat_params_list)
 
         # Se algum campo de concatenação estiver preenchido, realiza a concatenação
-        concat_files = self.concat_logs(input_file_path, output_dir, concat_params_list)
+        concat_files = concat_logs(input_file_path, output_dir, concat_params_list)
 
         # Se nenhum arquivo for criado, retorna uma mensagem de erro
         if not all_output_files and not concat_files:
@@ -230,31 +230,24 @@ class LogFilterApp(QMainWindow):
         return (f"Processamento concluído.<br>Tempo decorrido: {formatted_time}<br>"
                 f"Arquivo de log disponível em:<br><a href='{filtered_file}'>{filtered_file}</a><br>")
 
-    def create_output_directory(self, input_file_path, save_dir):
-        log_filename = Path(input_file_path).stem
-        output_dir = get_unique_path(Path(save_dir) / f"filtered_{log_filename}")
-        output_dir.mkdir(parents=True, exist_ok=True)
-        return output_dir
-
-    def concat_logs(self, input_file_path, output_dir, concat_params_list):
-        concat_files = []
-        if concat_params_list:
-            for concat_param in concat_params_list:
-                concat_files.append(concat_requests(input_file_path, output_dir, concat_param))
-        return concat_files
-
     def audit_and_generate_checksum(self, input_file_path, all_output_files, concat_files, output_dir):
-        missing_lines_file, extra_lines = audit_processed_content(input_file_path, all_output_files + concat_files,
-                                                                  output_dir)
-        all_output_files.append(missing_lines_file)
-        checksum_log, checksum_content = generate_checksum(input_file_path, all_output_files + concat_files, output_dir)
-        all_output_files.append(checksum_log)
+        all_files = all_output_files + concat_files
+        if not all_files:
+            return "Nenhum arquivo foi criado."
 
+        # Auditoria dos arquivos processados
+        missing_lines_file, extra_lines = audit_processed_content(input_file_path, all_files, output_dir)
+        all_files.append(missing_lines_file)
+
+        # Geração do checksum
+        checksum_log, checksum_content = generate_checksum(input_file_path, all_files, output_dir)
+        all_files.append(checksum_log)
+
+        formatted_checksum_content = f"<pre>{checksum_content}</pre>"
         elapsed_time = time.time() - self.start_time
         formatted_time = format_time(elapsed_time)
-        formatted_checksum_content = f"<pre>{checksum_content}</pre>"
         return (f"Processamento concluído.<br>Tempo decorrido: {formatted_time}<br>"
-                f"Arquivos estão disponíveis em:<br><a href='{output_dir}'>{output_dir}</a><br><br>"
+                f"Arquivo está disponível em:<br><a href='{output_dir}'>{output_dir}</a><br><br>"
                 f"Checksum:{formatted_checksum_content}")
 
 def main():

@@ -18,6 +18,12 @@ def get_unique_path(base_path):
             return new_path
         counter += 1
 
+def create_output_directory(input_file_path, save_dir):
+    log_filename = Path(input_file_path).stem
+    output_dir = get_unique_path(Path(save_dir) / f"filtered_{log_filename}")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    return output_dir
+
 def format_time(elapsed_time):
     # Formata o tempo decorrido em horas, minutos e segundos
     hours, remainder = divmod(elapsed_time, 3600)
