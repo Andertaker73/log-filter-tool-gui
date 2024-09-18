@@ -10,10 +10,16 @@ A aplicação foi adaptada para rodar localmente, utilizando uma interface gráf
 
 ## Instalação
 
-### Clonar o repositório
+### Clonar e acessar o repositório
 ```
-git clone https://github.com/Andertaker73/log-filter-tool-local-gui.git
+git clone https://github.com/Andertaker73/log-filter-tool-gui.git
+```
+```
 cd log-filter-tool-gui
+```
+### Criar o ambiente virtual
+```
+python -m venv .venv
 ```
 ### Ativar o ambiente virtual
 
