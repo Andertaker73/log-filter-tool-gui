@@ -216,7 +216,7 @@ class LogFilterApp(QMainWindow):
             for line in log_origin:
                 if filter_param in line:
                     out_file.write(line)
-                    capture_lines = '*ERROR*' in line
+                    capture_lines = '*ERROR*' or 'Error' in line
                 elif capture_lines:
                     timestamp_match = re.match(r'\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}\.\d{3}', line)
                     if not timestamp_match:

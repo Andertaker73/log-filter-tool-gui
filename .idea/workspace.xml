@@ -4,8 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5643dd10-cac6-4ea6-b746-603b13f6308f" name="Changes" comment="some formating">
+    <list default="true" id="5643dd10-cac6-4ea6-b746-603b13f6308f" name="Changes" comment="updating readme and configs">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/gui.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/gui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/log_filter.py" beforeDir="false" afterPath="$PROJECT_DIR$/services/log_filter.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -61,7 +63,7 @@
     "ASKED_MARK_IGNORED_FILES_AS_EXCLUDED": "true",
     "Python.main.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "local-interface-creation",
+    "git-widget-placeholder": "main",
     "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
   }
 }]]></component>
@@ -337,7 +339,15 @@
       <option name="project" value="LOCAL" />
       <updated>1726513861890</updated>
     </task>
-    <option name="localTasksCounter" value="29" />
+    <task id="LOCAL-00029" summary="updating readme and configs">
+      <option name="closed" value="true" />
+      <created>1726669300596</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1726669300596</updated>
+    </task>
+    <option name="localTasksCounter" value="30" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -364,7 +374,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="added .bat file with shortcut for easy opening" />
     <MESSAGE value="translated messages, labels and buttons to pt-br" />
     <MESSAGE value="fixed error message on GUI" />
     <MESSAGE value="added info message after run process log button" />
@@ -389,6 +398,7 @@
     <MESSAGE value="modularization - added log_processing and moved class LogProcessingThread" />
     <MESSAGE value="added adaptable path message for select_log_file and select_save_dir" />
     <MESSAGE value="some formating" />
-    <option name="LAST_COMMIT_MESSAGE" value="some formating" />
+    <MESSAGE value="updating readme and configs" />
+    <option name="LAST_COMMIT_MESSAGE" value="updating readme and configs" />
   </component>
 </project>

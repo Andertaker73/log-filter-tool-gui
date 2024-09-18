@@ -19,7 +19,7 @@ def filter_urls(input_file, output_dir, concat_params_list):
                 match = re.search(r'(GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD|TRACE|CONNECT) (.*?) HTTP/1.1', line)
                 if match:
                     url = match.group(2)
-                    capture_lines = '*ERROR*' in line
+                    capture_lines = '*ERROR*' or 'Error' in line
 
                     # Modificar para verificar a presença de qualquer substring no parâmetro de concatenação
                     if any(concat_param in url for concat_param in concat_params_list):
