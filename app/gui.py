@@ -2,8 +2,8 @@ import sys
 import re
 import time
 
-from PyQt5.QtCore import QTimer
 from pathlib import Path
+from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QPushButton, QVBoxLayout, QWidget, QLabel,
                              QLineEdit, QTextEdit, QGroupBox, QAction)
 from services.checksum import generate_checksum
