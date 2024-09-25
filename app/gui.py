@@ -4,8 +4,7 @@ import time
 
 from pathlib import Path
 from PyQt5.QtCore import QTimer
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QPushButton, QVBoxLayout, QWidget, QLabel,
-                             QLineEdit, QTextEdit, QGroupBox, QAction)
+from PyQt5.QtWidgets import (QFileDialog, QFontDialog)
 from services.checksum import generate_checksum
 from services.log_audit import audit_processed_content
 from services.log_concat import concat_logs
@@ -13,6 +12,10 @@ from services.log_filter import sanitize_filename, filter_urls
 from services.log_processing import LogProcessingThread
 from services.shortcut_creator import create_bat_file_and_shortcut
 from services.utils import get_unique_path, format_time, create_output_directory
+from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QPushButton, QLabel, QLineEdit, QGroupBox, QTextEdit, QAction, \
+    QApplication, QWidget
+from PyQt5.QtGui import QFont
+from PyQt5.QtCore import QSettings
 
 
 class LogFilterApp(QMainWindow):
@@ -37,18 +40,37 @@ class LogFilterApp(QMainWindow):
         self.result_text = None
         self.setWindowTitle("Log Filter Tool")
         self.setGeometry(100, 100, 800, 800)
+        self.settings = QSettings('LogFilterTool', 'UserPreferences')
+
+        # Definindo a fonte padrão
+        default_font_family = "Calibri"
+        default_font_size = 10
+        default_font = QFont(default_font_family, default_font_size)
+        self.setFont(default_font)
+
         self.init_ui()
 
     def init_ui(self):
         layout = QVBoxLayout()
 
+        # Restaurar fonte salva
+        saved_font = self.settings.value('font')
+        if saved_font:
+            QApplication.instance().setFont(QFont(saved_font))
+
         # Adiciona o menu
         menu_bar = self.menuBar()
         file_menu = menu_bar.addMenu("Ferramentas")
+        settings_menu = menu_bar.addMenu('Configurações')
 
         create_shortcut_action = QAction("Criar Atalho", self)
         create_shortcut_action.triggered.connect(create_bat_file_and_shortcut)
         file_menu.addAction(create_shortcut_action)
+
+        # Ação para abrir o diálogo de alteração de fonte
+        font_action = QAction('Alterar Fonte', self)
+        font_action.triggered.connect(self.change_font)
+        settings_menu.addAction(font_action)
 
         # Grupo para seleção de arquivo
         file_group = QGroupBox("Seleção de Arquivo")
@@ -122,6 +144,12 @@ class LogFilterApp(QMainWindow):
         container = QWidget()
         container.setLayout(layout)
         self.setCentralWidget(container)
+
+    def change_font(self):
+        font, ok = QFontDialog.getFont()
+        if ok:
+            QApplication.instance().setFont(font)
+            self.settings.setValue('font', font.toString())
 
     def add_concat_param_field(self):
         new_input = QLineEdit()
